@@ -1,0 +1,454 @@
+<!--
+  ============================================================
+  PRECISION VEHICLE WRAPS — GHL CUSTOM HTML FORM
+  Reusable GHL Custom Code Element template
+  ============================================================
+  HOW TO ADAPT FOR FUTURE GHL BUILDS:
+    1. In GHL → Automation → new workflow → trigger = Inbound Webhook
+    2. Copy the generated URL into GHL_WEBHOOK_URL below
+    3. Fire one test submit, map fields in the trigger UI
+    4. Customize the fields/labels/brand colors in the <style> block
+    5. Paste this ENTIRE file into a Funnel/Website Custom Code element
+       (NOT the Form Builder's HTML field — that sandboxes scripts)
+
+  WHY THIS WORKS IN GHL WHERE NORMAL HTML DOESN'T:
+    • No <!doctype>/<html>/<head>/<body> — GHL strips those anyway
+    • <script> is OUTSIDE every <div> (GHL won't execute scripts
+      nested inside divs in Custom HTML blocks)
+    • No inline onclick="" handlers — GHL's sanitizer can strip
+      those or run them in a scope where the handler is undefined
+    • setTimeout-wrapped DOM binding — GHL injects Custom HTML
+      asynchronously, so #submitBtn may not exist when the script
+      first runs. Retry loop + defensive null checks handle it.
+    • A real <form> element (not just a <div>) so browser autofill,
+      Enter-to-submit, and autocomplete work correctly
+    • Honeypot + min-time replaces reCAPTCHA for bot filtering
+    • !important on every visual property because GHL injects its
+      own CSS AFTER your <style> block
+  ============================================================
+-->
+
+<style>
+  .pvw-form, .pvw-form * { box-sizing: border-box; }
+  .pvw-form {
+    background-color: #000000 !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    padding: 32px 16px 40px !important;
+  }
+  .pvw-form .inner { max-width: 640px; margin: 0 auto; }
+
+  .pvw-form .card {
+    background-color: #111111 !important;
+    border-radius: 8px !important;
+    border-top: 3px solid #d10000 !important;
+    padding: 32px 30px !important;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.7) !important;
+  }
+
+  .pvw-form .section-heading {
+    color: #d10000 !important;
+    font-size: 10px !important;
+    font-weight: bold !important;
+    letter-spacing: 2.5px !important;
+    text-transform: uppercase !important;
+    margin: 0 0 20px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid #1e1e1e !important;
+  }
+  .pvw-form .section-gap { margin-top: 28px !important; }
+
+  .pvw-form .form-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 20px 24px !important;
+  }
+  .pvw-form .full-width { grid-column: 1 / -1 !important; }
+
+  .pvw-form label,
+  .pvw-form label span:not(.req) {
+    display: block !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: bold !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    margin-bottom: 8px !important;
+  }
+  .pvw-form .req { color: #d10000 !important; margin-left: 2px; }
+
+  .pvw-form input[type="text"],
+  .pvw-form input[type="tel"],
+  .pvw-form input[type="email"],
+  .pvw-form select,
+  .pvw-form textarea {
+    width: 100% !important;
+    background-color: #181818 !important;
+    border: 1px solid #2c2c2c !important;
+    border-radius: 5px !important;
+    color: #ffffff !important;
+    font-size: 15px !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    padding: 13px 15px !important;
+    outline: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+  .pvw-form input::placeholder,
+  .pvw-form textarea::placeholder {
+    color: #484848 !important;
+    opacity: 1 !important;
+  }
+  .pvw-form input:focus,
+  .pvw-form select:focus,
+  .pvw-form textarea:focus {
+    border-color: #d10000 !important;
+    background-color: #1c1c1c !important;
+  }
+  .pvw-form input.error,
+  .pvw-form select.error,
+  .pvw-form textarea.error {
+    border-color: #ff4444 !important;
+  }
+
+  .pvw-form .select-wrap { position: relative; }
+  .pvw-form .select-wrap::after {
+    content: '\25BE';
+    color: #555555;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    font-size: 14px;
+  }
+  .pvw-form select option {
+    background-color: #181818 !important;
+    color: #ffffff !important;
+  }
+
+  .pvw-form textarea {
+    resize: vertical !important;
+    min-height: 110px !important;
+    line-height: 1.5 !important;
+  }
+
+  .pvw-form .field-error {
+    color: #ff4444 !important;
+    font-size: 11px !important;
+    margin-top: 5px !important;
+    display: none;
+    font-weight: normal !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+  }
+
+  .pvw-form .btn-submit {
+    display: block !important;
+    width: 100% !important;
+    background-color: #d10000 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 5px !important;
+    padding: 17px !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+    letter-spacing: 2px !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+    margin-top: 28px !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    position: relative;
+  }
+  .pvw-form .btn-submit:hover:not(:disabled) { background-color: #b50000 !important; }
+  .pvw-form .btn-submit:disabled { opacity: 0.5 !important; cursor: not-allowed !important; }
+  .pvw-form .btn-submit .btn-spinner {
+    display: none;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: pvw-spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .pvw-form .btn-submit.is-loading .btn-label { display: none; }
+  .pvw-form .btn-submit.is-loading .btn-loading { display: inline; }
+  .pvw-form .btn-submit.is-loading .btn-spinner { display: inline-block; }
+  .pvw-form .btn-loading { display: none; }
+  @keyframes pvw-spin { to { transform: rotate(360deg); } }
+
+  .pvw-form .success-msg { display: none; text-align: center; padding: 32px 0 16px; }
+  .pvw-form .check-icon {
+    width: 64px; height: 64px;
+    background-color: #d10000 !important;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 30px;
+    color: #ffffff !important;
+  }
+  .pvw-form .success-msg h3 { color: #ffffff !important; font-size: 22px !important; margin: 0 0 10px !important; }
+  .pvw-form .success-msg p  { color: #888888 !important; font-size: 14px !important; margin: 0 !important; line-height: 1.6 !important; }
+
+  .pvw-form .footer-note {
+    color: #383838 !important;
+    font-size: 12px !important;
+    text-align: center !important;
+    margin-top: 24px !important;
+  }
+
+  /* Honeypot — invisible to humans, irresistible to bots */
+  .pvw-form .pvw-hp {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+  }
+
+  @media (max-width: 500px) {
+    .pvw-form .card { padding: 24px 18px !important; }
+    .pvw-form .form-grid { grid-template-columns: 1fr !important; }
+    .pvw-form .full-width { grid-column: 1 !important; }
+  }
+</style>
+
+<div class="pvw-form">
+  <div class="inner">
+    <div class="card">
+
+      <form id="pvwForm" novalidate>
+        <div class="form-grid">
+
+          <div class="full-width">
+            <p class="section-heading">Your Contact Info</p>
+          </div>
+
+          <div>
+            <label for="pvw-firstName">First Name <span class="req">*</span></label>
+            <input type="text" id="pvw-firstName" name="firstName" placeholder="Alex" autocomplete="given-name">
+            <p class="field-error" id="err-firstName">Please enter your first name.</p>
+          </div>
+
+          <div>
+            <label for="pvw-lastName">Last Name <span class="req">*</span></label>
+            <input type="text" id="pvw-lastName" name="lastName" placeholder="Smith" autocomplete="family-name">
+            <p class="field-error" id="err-lastName">Please enter your last name.</p>
+          </div>
+
+          <div>
+            <label for="pvw-email">Email Address <span class="req">*</span></label>
+            <input type="email" id="pvw-email" name="email" placeholder="you@email.com" autocomplete="email">
+            <p class="field-error" id="err-email">Please enter a valid email address.</p>
+          </div>
+
+          <div>
+            <label for="pvw-phone">Phone Number <span class="req">*</span></label>
+            <input type="tel" id="pvw-phone" name="phone" placeholder="(780) 555-0100" autocomplete="tel">
+            <p class="field-error" id="err-phone">Please enter a valid phone number.</p>
+          </div>
+
+          <div class="full-width section-gap">
+            <p class="section-heading">Vehicle Details</p>
+          </div>
+
+          <div>
+            <label for="pvw-vehicleYear">Vehicle Year <span class="req">*</span></label>
+            <input type="text" id="pvw-vehicleYear" name="vehicleYear" placeholder="e.g. 2022" maxlength="4">
+            <p class="field-error" id="err-vehicleYear">Please enter the vehicle year.</p>
+          </div>
+
+          <div>
+            <label for="pvw-vehicleMake">Vehicle Make <span class="req">*</span></label>
+            <input type="text" id="pvw-vehicleMake" name="vehicleMake" placeholder="e.g. Ford, BMW, Ram">
+            <p class="field-error" id="err-vehicleMake">Please enter the vehicle make.</p>
+          </div>
+
+          <div class="full-width">
+            <label for="pvw-vehicleModel">Vehicle Model <span class="req">*</span></label>
+            <input type="text" id="pvw-vehicleModel" name="vehicleModel" placeholder="e.g. M4, Transit, F-150">
+            <p class="field-error" id="err-vehicleModel">Please enter the vehicle model.</p>
+          </div>
+
+          <div class="full-width">
+            <label for="pvw-serviceType">Service Interested In <span class="req">*</span></label>
+            <div class="select-wrap">
+              <select id="pvw-serviceType" name="serviceType">
+                <option value="" disabled selected>Select a service</option>
+                <option>Full Vehicle Wrap</option>
+                <option>Partial Wrap</option>
+                <option>Paint Protection Film (PPF)</option>
+                <option>Ceramic Coating</option>
+                <option>Windshield Protection</option>
+                <option>Fleet Wrap (Multiple Vehicles)</option>
+                <option>Decals / Lettering</option>
+                <option>Color Change Wrap</option>
+                <option>Other / Not Sure Yet</option>
+              </select>
+            </div>
+            <p class="field-error" id="err-serviceType">Please select a service.</p>
+          </div>
+
+          <div class="full-width">
+            <label for="pvw-message">Additional Details &amp; Questions</label>
+            <textarea id="pvw-message" name="message"
+              placeholder="Tell us anything the team should know — number of vehicles, design files, budget range, timeline, or any questions you have..."></textarea>
+          </div>
+
+          <!-- Honeypot: humans won't see or fill this; bots will -->
+          <div class="pvw-hp" aria-hidden="true">
+            <label>Website</label>
+            <input type="text" id="pvw-website" name="website" tabindex="-1" autocomplete="off">
+          </div>
+
+        </div>
+
+        <button type="button" class="btn-submit" id="pvw-submitBtn">
+          <span class="btn-spinner"></span><span class="btn-label">Request My Free Quote &rarr;</span><span class="btn-loading">Sending...</span>
+        </button>
+      </form>
+
+      <div class="success-msg" id="pvw-successMsg">
+        <div class="check-icon">&#10003;</div>
+        <h3>We've Got Your Request!</h3>
+        <p>Alex will be in touch within 1 business day<br>to discuss your project.</p>
+      </div>
+
+    </div>
+    <p class="footer-note">&copy; 2026 Precision Vehicle Wraps Inc. &nbsp;|&nbsp; Edmonton, AB</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ─────────────────────────────────────────────────────────
+  // CONFIG — swap this URL for any future GHL project
+  // ─────────────────────────────────────────────────────────
+  var GHL_WEBHOOK_URL = 'https://services.leadconnectorhq.com/hooks/hrVgZySsdb9y1vpJfUw7/webhook-trigger/USkvJQNA7osuZzOhja9b';
+  var FORM_LOAD_TIME  = Date.now();
+  var MIN_SUBMIT_MS   = 1500; // reject submits faster than this (bots)
+
+  function $(id) { return document.getElementById(id); }
+  function val(id) { var el = $(id); return el ? el.value.trim() : ''; }
+
+  function setError(id, show) {
+    var el  = $('pvw-' + id);
+    var err = $('err-' + id);
+    if (el)  el.classList[show ? 'add' : 'remove']('error');
+    if (err) err.style.display = show ? 'block' : 'none';
+    return show;
+  }
+
+  function isValidEmail(v) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // TODO (Bond): implement isValidPhone() below.
+  //
+  // This is YOUR design call — phone validation is a UX vs
+  // data-quality tradeoff only you can make for this client.
+  //
+  // Must accept (all real formats Edmonton customers will type):
+  //   (780) 555-0100
+  //   780-555-0100
+  //   +1 780 555 0100
+  //   7805550100
+  //   780.555.0100
+  //
+  // Must reject:
+  //   anything shorter than 10 digits
+  //   anything longer than 15 digits (E.164 max)
+  //   non-numeric junk
+  //
+  // HINT: strip all non-digits first, then check length.
+  //       Return true/false. ~5 lines.
+  // ─────────────────────────────────────────────────────────
+  function isValidPhone(v) {
+    var digits = (v || '').replace(/\D/g, '');
+    // Strip leading country code 1 for NANP numbers so 11-digit +1 works
+    if (digits.length === 11 && digits.charAt(0) === '1') digits = digits.slice(1);
+    return digits.length >= 10 && digits.length <= 15;
+  }
+
+  function submitForm() {
+    var firstName    = val('pvw-firstName');
+    var lastName     = val('pvw-lastName');
+    var email        = val('pvw-email');
+    var phone        = val('pvw-phone');
+    var vehicleYear  = val('pvw-vehicleYear');
+    var vehicleMake  = val('pvw-vehicleMake');
+    var vehicleModel = val('pvw-vehicleModel');
+    var serviceType  = val('pvw-serviceType');
+    var message      = val('pvw-message');
+    var honeypot     = val('pvw-website');
+
+    // Bot checks — fail silently so bots don't learn
+    if (honeypot) { showSuccess(); return; }
+    if (Date.now() - FORM_LOAD_TIME < MIN_SUBMIT_MS) { showSuccess(); return; }
+
+    var hasError = false;
+    hasError = setError('firstName',    !firstName)           || hasError;
+    hasError = setError('lastName',     !lastName)            || hasError;
+    hasError = setError('email',        !isValidEmail(email)) || hasError;
+    hasError = setError('phone',        !isValidPhone(phone)) || hasError;
+    hasError = setError('vehicleYear',  !vehicleYear)         || hasError;
+    hasError = setError('vehicleMake',  !vehicleMake)         || hasError;
+    hasError = setError('vehicleModel', !vehicleModel)        || hasError;
+    hasError = setError('serviceType',  !serviceType)         || hasError;
+    if (hasError) return;
+
+    var btn = $('pvw-submitBtn');
+    btn.disabled = true;
+    btn.classList.add('is-loading');
+
+    // Payload shape matches what GHL's Inbound Webhook trigger maps cleanly
+    var payload = {
+      firstName:     firstName,
+      lastName:      lastName,
+      email:         email,
+      phone:         phone,
+      vehicle_year:  vehicleYear,
+      vehicle_make:  vehicleMake,
+      vehicle_model: vehicleModel,
+      service_type:  serviceType,
+      message:       message,
+      source:        'Precision Vehicle Wraps Web Form',
+      page_url:      window.location.href
+    };
+
+    fetch(GHL_WEBHOOK_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    })
+    .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      showSuccess();
+    })
+    .catch(function(err) {
+      console.error('PVW submission error:', err);
+      btn.disabled = false;
+      btn.classList.remove('is-loading');
+      alert('Something went wrong. Please try again or call us directly.');
+    });
+  }
+
+  function showSuccess() {
+    var f = $('pvwForm'), s = $('pvw-successMsg');
+    if (f) f.style.display = 'none';
+    if (s) s.style.display = 'block';
+  }
+
+  // Defensive DOM binding — GHL may not have rendered the form
+  // by the time this script executes. Retry until the button exists.
+  function bind() {
+    var btn = $('pvw-submitBtn');
+    if (!btn) { setTimeout(bind, 150); return; }
+    btn.addEventListener('click', submitForm);
+  }
+  setTimeout(bind, 300);
+})();
+</script>
