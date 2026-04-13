@@ -425,7 +425,6 @@
       body:    JSON.stringify(payload)
     })
     .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
       showSuccess();
     })
     .catch(function(err) {
