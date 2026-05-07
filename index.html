@@ -199,6 +199,45 @@
     margin-top: 24px !important;
   }
 
+  /* Compliance / SMS consent checkboxes (A2P 10DLC + TCPA) */
+  .pvw-form .consent-block {
+    margin-top: 28px !important;
+    padding-top: 22px !important;
+    border-top: 1px solid #1e1e1e !important;
+  }
+  .pvw-form .consent-row {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+  .pvw-form .consent-row:last-child { margin-bottom: 0 !important; }
+  .pvw-form .consent-row input[type="checkbox"] {
+    flex-shrink: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin: 2px 0 0 0 !important;
+    accent-color: #d10000 !important;
+    cursor: pointer !important;
+  }
+  .pvw-form .consent-row label {
+    color: #aaaaaa !important;
+    font-size: 12px !important;
+    font-weight: normal !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    line-height: 1.55 !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    flex: 1 !important;
+  }
+  .pvw-form .consent-row.error label { color: #ff6666 !important; }
+  .pvw-form .consent-row.error input[type="checkbox"] {
+    outline: 2px solid #ff4444 !important;
+    outline-offset: 2px !important;
+  }
+  .pvw-form .consent-required { color: #d10000 !important; }
+
   /* Honeypot — invisible to humans, irresistible to bots */
   .pvw-form .pvw-hp {
     position: absolute !important;
@@ -305,6 +344,31 @@
 
         </div>
 
+        <!-- ─────────────────────────────────────────────────────────
+             SMS / Email Consent (A2P 10DLC + TCPA compliance)
+             - Transactional consent is REQUIRED to submit
+             - Marketing consent is OPTIONAL (must remain freely given)
+             - Both unchecked by default — never pre-check consent
+        ───────────────────────────────────────────────────────── -->
+        <div class="consent-block">
+
+          <div class="consent-row" id="consent-row-transactional">
+            <input type="checkbox" id="pvw-consentTransactional" name="sms_consent_transactional" value="true">
+            <label for="pvw-consentTransactional">
+              By checking this box, I consent to receive non-marketing text messages from <strong>Precision Vehicle Wraps</strong> about quotes, appointment confirmations, project updates, and service reminders. Message frequency varies. Message &amp; data rates may apply. Text HELP for assistance, reply STOP to opt out. <span class="consent-required">*</span>
+            </label>
+          </div>
+          <p class="field-error" id="err-consentTransactional" style="margin-left:30px;">You must agree to receive transactional messages so we can confirm your appointment.</p>
+
+          <div class="consent-row" style="margin-top:14px;">
+            <input type="checkbox" id="pvw-consentMarketing" name="sms_consent_marketing" value="true">
+            <label for="pvw-consentMarketing">
+              By checking this box, I consent to receive marketing and promotional messages including special offers, discounts, and new product updates from <strong>Precision Vehicle Wraps</strong> at the phone number provided. Frequency may vary. Message &amp; data rates may apply. Text HELP for assistance, reply STOP to opt out.
+            </label>
+          </div>
+
+        </div>
+
         <button type="button" class="btn-submit" id="pvw-submitBtn">
           <span class="btn-spinner"></span><span class="btn-label">Request My Free Quote &rarr;</span><span class="btn-loading">Sending...</span>
         </button>
@@ -373,6 +437,19 @@
     return digits.length >= 10 && digits.length <= 15;
   }
 
+  function isChecked(id) {
+    var el = $(id);
+    return !!(el && el.checked);
+  }
+
+  function setConsentError(show) {
+    var row = $('consent-row-transactional');
+    var err = $('err-consentTransactional');
+    if (row) row.classList[show ? 'add' : 'remove']('error');
+    if (err) err.style.display = show ? 'block' : 'none';
+    return show;
+  }
+
   function submitForm() {
     var firstName    = val('pvw-firstName');
     var lastName     = val('pvw-lastName');
@@ -384,6 +461,8 @@
     var serviceType  = val('pvw-serviceType');
     var message      = val('pvw-message');
     var honeypot     = val('pvw-website');
+    var consentTxn   = isChecked('pvw-consentTransactional');
+    var consentMkt   = isChecked('pvw-consentMarketing');
 
     // Bot checks — fail silently so bots don't learn
     if (honeypot) { showSuccess(); return; }
@@ -398,6 +477,7 @@
     hasError = setError('vehicleMake',  !vehicleMake)         || hasError;
     hasError = setError('vehicleModel', !vehicleModel)        || hasError;
     hasError = setError('serviceType',  !serviceType)         || hasError;
+    hasError = setConsentError(!consentTxn)                   || hasError;
     if (hasError) return;
 
     var btn = $('pvw-submitBtn');
@@ -406,17 +486,21 @@
 
     // Payload shape matches what GHL's Inbound Webhook trigger maps cleanly
     var payload = {
-      firstName:     firstName,
-      lastName:      lastName,
-      email:         email,
-      phone:         phone,
-      vehicle_year:  vehicleYear,
-      vehicle_make:  vehicleMake,
-      vehicle_model: vehicleModel,
-      service_type:  serviceType,
-      message:       message,
-      source:        'Precision Vehicle Wraps Web Form',
-      page_url:      window.location.href
+      firstName:                 firstName,
+      lastName:                  lastName,
+      email:                     email,
+      phone:                     phone,
+      vehicle_year:              vehicleYear,
+      vehicle_make:              vehicleMake,
+      vehicle_model:             vehicleModel,
+      service_type:              serviceType,
+      message:                   message,
+      sms_consent_transactional: consentTxn,
+      sms_consent_marketing:     consentMkt,
+      consent_timestamp:         new Date().toISOString(),
+      consent_user_agent:        (navigator && navigator.userAgent) ? navigator.userAgent : '',
+      source:                    'Precision Vehicle Wraps Web Form',
+      page_url:                  window.location.href
     };
 
     fetch(GHL_WEBHOOK_URL, {
@@ -425,6 +509,7 @@
       body:    JSON.stringify(payload)
     })
     .then(function(res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       showSuccess();
     })
     .catch(function(err) {
