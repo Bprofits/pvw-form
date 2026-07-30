@@ -509,7 +509,9 @@
       body:    JSON.stringify(payload)
     })
     .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      // GHL's inbound webhook replies 422 even when it ingests the payload,
+      // so any HTTP response counts as success — never throw on !res.ok here.
+      // (Fixed in 42e176d, regressed in 70af4b4 — do not re-add the status check.)
       showSuccess();
     })
     .catch(function(err) {
