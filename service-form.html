@@ -1,0 +1,954 @@
+<!--
+  ============================================================
+  PRECISION VEHICLE WRAPS: QUOTE FORM FOR EVERY PAGE
+  ============================================================
+  One snippet for the contact page and every service page. Paste this
+  whole file into an Elementor "HTML" widget (the Shortcode widget the
+  contact page uses today works too).
+
+  WHICH FORM SHOWS
+    Set data-service on the <div class="pvw-qf"> below:
+      ppf | ceramic | windshield | fleet | decals | graphic-design |
+      special-projects | window-tinting | general
+    Leave it as "auto" and the form reads the page address instead
+    (/paint-protection-film/ = ppf, /ceramic-coating/ = ceramic, ...).
+    Any other page gets the general form with the full service list.
+
+  OPTIONAL SETTINGS (same <div>)
+    data-theme="dark"    solid dark card, for white sections (default)
+    data-theme="glass"   see-through card, for dark sections (contact page)
+    data-theme="light"   white card with navy text
+    data-heading="..."   replace the heading; "off" hides the heading block
+    data-sub="..."       replace the line under the heading
+    data-thanks="off"    stay on the page after sending
+
+  LINK A BUTTON TO THE FORM
+    The first form on a page gets id="quote", so a button link of
+    #quote scrolls to it.
+
+  DO NOT CHANGE
+    - The values in SERVICES. GHL gets the exact text (opportunity name,
+      "Service Interested" field, the lead note). Labels visitors see
+      can differ; values cannot, unless the GHL workflow changes first.
+    - source: 'Precision Vehicle Wraps Web Form' (the opportunity source).
+    - "Any HTTP reply is success" on the webhook call (GHL answers 422
+      even when it saved the lead).
+
+  AFTER A SEND
+    1. dataLayer event "generate_lead" (service_type, form_variant).
+    2. The visitor lands on the thank-you page Google Ads counts:
+         PPF      /thank-you-ppf-quote/  (uses /thank-you/ if missing)
+         Ceramic  /ceramic-thank-you/
+         Others   /thank-you/
+  ============================================================
+-->
+
+<style>
+  .pvw-qf, .pvw-qf * { box-sizing: border-box; }
+  .pvw-qf {
+    --qf-card: #0f0f10;
+    --qf-card-edge: rgba(255, 255, 255, 0.08);
+    --qf-text: #ffffff;
+    --qf-muted: #b5b5b5;
+    --qf-field: #1b1b1c;
+    --qf-field-focus: #222224;
+    --qf-line: rgba(255, 255, 255, 0.13);
+    --qf-placeholder: #7f7f7f;
+    --qf-accent: #d10000;
+    --qf-accent-hover: #b30000;
+    --qf-on-accent: #ffffff;
+    --qf-error: #ff5c5c;
+    --qf-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+    display: block !important;
+    width: 100% !important;
+    padding: 8px 0 !important;
+    font-family: inherit;
+    text-align: left !important;
+    scroll-margin-top: 120px;
+  }
+  .pvw-qf[data-theme="glass"] {
+    --qf-card: transparent;
+    --qf-card-edge: transparent;
+    --qf-shadow: none;
+  }
+  .pvw-qf[data-theme="light"] {
+    --qf-card: #ffffff;
+    --qf-card-edge: rgba(1, 22, 39, 0.10);
+    --qf-text: #011627;
+    --qf-muted: #4b5763;
+    --qf-field: #f3f4f6;
+    --qf-field-focus: #ffffff;
+    --qf-line: rgba(1, 22, 39, 0.16);
+    --qf-placeholder: #86909a;
+    --qf-error: #c40000;
+    --qf-shadow: 0 18px 48px rgba(1, 22, 39, 0.12);
+  }
+
+  .pvw-qf .qf-card {
+    max-width: 680px !important;
+    margin: 0 auto !important;
+    background: var(--qf-card) !important;
+    border: 1px solid var(--qf-card-edge) !important;
+    border-top: 3px solid var(--qf-accent) !important;
+    border-radius: 16px !important;
+    box-shadow: var(--qf-shadow) !important;
+    padding: 34px 32px 28px !important;
+    color: var(--qf-text) !important;
+    scroll-margin-top: 120px;
+  }
+
+  .pvw-qf .qf-eyebrow {
+    color: var(--qf-accent) !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 2px !important;
+    line-height: 1.3 !important;
+    text-transform: uppercase !important;
+    margin: 0 0 8px !important;
+  }
+  .pvw-qf .qf-title {
+    color: var(--qf-text) !important;
+    font-family: inherit !important;
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.15 !important;
+    text-transform: none !important;
+    margin: 0 0 10px !important;
+    padding: 0 !important;
+  }
+  .pvw-qf .qf-sub {
+    color: var(--qf-muted) !important;
+    font-size: 15px !important;
+    line-height: 1.55 !important;
+    margin: 0 0 24px !important;
+  }
+
+  .pvw-qf .qf-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 18px 20px !important;
+  }
+  .pvw-qf .qf-full { grid-column: 1 / -1 !important; }
+  .pvw-qf .qf-section {
+    grid-column: 1 / -1 !important;
+    color: var(--qf-accent) !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 2px !important;
+    line-height: 1.3 !important;
+    text-transform: uppercase !important;
+    margin: 10px 0 0 !important;
+    padding: 0 0 10px !important;
+    border-bottom: 1px solid var(--qf-line) !important;
+  }
+  .pvw-qf .qf-section:first-child { margin-top: 0 !important; }
+
+  .pvw-qf .qf-label,
+  .pvw-qf fieldset legend {
+    display: block !important;
+    float: none !important;
+    width: auto !important;
+    color: var(--qf-text) !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
+    line-height: 1.3 !important;
+    text-transform: uppercase !important;
+    margin: 0 0 8px !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+  .pvw-qf .qf-req { color: var(--qf-accent) !important; margin-left: 2px; }
+  .pvw-qf .qf-opt {
+    color: var(--qf-muted) !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    margin-left: 4px;
+  }
+
+  .pvw-qf input[type="text"],
+  .pvw-qf input[type="tel"],
+  .pvw-qf input[type="email"],
+  .pvw-qf select,
+  .pvw-qf textarea {
+    display: block !important;
+    width: 100% !important;
+    min-height: 50px !important;
+    margin: 0 !important;
+    padding: 13px 15px !important;
+    background: var(--qf-field) !important;
+    border: 1px solid var(--qf-line) !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+    color: var(--qf-text) !important;
+    font-family: inherit !important;
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+    outline: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .pvw-qf input::placeholder,
+  .pvw-qf textarea::placeholder { color: var(--qf-placeholder) !important; opacity: 1 !important; }
+  .pvw-qf input:focus,
+  .pvw-qf select:focus,
+  .pvw-qf textarea:focus {
+    border-color: var(--qf-accent) !important;
+    background: var(--qf-field-focus) !important;
+    box-shadow: 0 0 0 3px rgba(209, 0, 0, 0.18) !important;
+  }
+  .pvw-qf .is-invalid,
+  .pvw-qf .is-invalid:focus { border-color: var(--qf-error) !important; }
+  .pvw-qf textarea { min-height: 112px !important; resize: vertical !important; }
+
+  .pvw-qf .qf-select { position: relative !important; }
+  .pvw-qf .qf-select select { padding-right: 42px !important; cursor: pointer !important; }
+  .pvw-qf .qf-select::after {
+    content: '\25BE';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--qf-muted);
+    font-size: 14px;
+    pointer-events: none;
+  }
+  .pvw-qf select option { background: var(--qf-field) !important; color: var(--qf-text) !important; }
+
+  .pvw-qf fieldset { border: 0 !important; margin: 0 !important; padding: 0 !important; min-width: 0 !important; }
+  .pvw-qf .qf-chips { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; }
+  .pvw-qf .qf-chip { position: relative !important; display: inline-block !important; margin: 0 !important; line-height: 1 !important; }
+  .pvw-qf .qf-chip input {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: 0 !important;
+    pointer-events: none !important;
+  }
+  .pvw-qf .qf-chip span {
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 44px !important;
+    padding: 10px 16px !important;
+    background: var(--qf-field) !important;
+    border: 1px solid var(--qf-line) !important;
+    border-radius: 999px !important;
+    color: var(--qf-text) !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    line-height: 1.25 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    cursor: pointer !important;
+    user-select: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .pvw-qf .qf-chip:hover span { border-color: var(--qf-accent) !important; }
+  .pvw-qf .qf-chip input:checked + span {
+    background: var(--qf-accent) !important;
+    border-color: var(--qf-accent) !important;
+    color: var(--qf-on-accent) !important;
+  }
+  .pvw-qf .qf-chip input:focus-visible + span { outline: 2px solid var(--qf-accent) !important; outline-offset: 2px !important; }
+  .pvw-qf .qf-chips.is-invalid .qf-chip span { border-color: var(--qf-error) !important; }
+
+  .pvw-qf .qf-err {
+    display: none;
+    color: var(--qf-error) !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.4 !important;
+    text-transform: none !important;
+    margin: 6px 0 0 !important;
+  }
+  .pvw-qf .qf-err.is-shown { display: block !important; }
+
+  .pvw-qf .qf-consent {
+    margin: 26px 0 0 !important;
+    padding: 20px 0 0 !important;
+    border-top: 1px solid var(--qf-line) !important;
+  }
+  .pvw-qf .qf-check { display: flex !important; align-items: flex-start !important; gap: 12px !important; margin: 0 0 14px !important; }
+  .pvw-qf .qf-check:last-child { margin-bottom: 0 !important; }
+  .pvw-qf .qf-check input[type="checkbox"] {
+    flex-shrink: 0 !important;
+    width: 18px !important;
+    height: 18px !important;
+    margin: 2px 0 0 !important;
+    accent-color: var(--qf-accent) !important;
+    cursor: pointer !important;
+  }
+  .pvw-qf .qf-check label {
+    flex: 1 !important;
+    display: block !important;
+    color: var(--qf-muted) !important;
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.55 !important;
+    text-transform: none !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+  }
+  .pvw-qf .qf-check label strong { color: var(--qf-text) !important; }
+  .pvw-qf .qf-check.is-invalid label { color: var(--qf-error) !important; }
+  .pvw-qf .qf-check.is-invalid input[type="checkbox"] { outline: 2px solid var(--qf-error) !important; outline-offset: 2px !important; }
+  .pvw-qf .qf-consent .qf-err { margin: -6px 0 12px 30px !important; }
+
+  .pvw-qf .qf-submit {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-height: 56px !important;
+    margin: 24px 0 0 !important;
+    padding: 16px 20px !important;
+    background: var(--qf-accent) !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+    color: var(--qf-on-accent) !important;
+    font-family: inherit !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    letter-spacing: 2px !important;
+    line-height: 1.2 !important;
+    text-transform: uppercase !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+  }
+  .pvw-qf .qf-submit:hover,
+  .pvw-qf .qf-submit:focus { background: var(--qf-accent-hover) !important; color: var(--qf-on-accent) !important; }
+  .pvw-qf .qf-submit:focus-visible { outline: 2px solid var(--qf-text) !important; outline-offset: 3px !important; }
+  .pvw-qf .qf-submit:active { transform: translateY(1px); }
+  .pvw-qf .qf-submit:disabled { opacity: 0.65 !important; cursor: wait !important; transform: none; }
+  .pvw-qf .qf-spin {
+    display: none;
+    width: 15px;
+    height: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: pvw-qf-spin 0.7s linear infinite;
+  }
+  .pvw-qf .qf-submit.is-loading .qf-spin { display: inline-block; }
+  @keyframes pvw-qf-spin { to { transform: rotate(360deg); } }
+
+  .pvw-qf .qf-fail {
+    display: none;
+    margin: 16px 0 0 !important;
+    padding: 12px 14px !important;
+    border: 1px solid var(--qf-error) !important;
+    border-radius: 10px !important;
+    color: var(--qf-error) !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+  .pvw-qf .qf-fail.is-shown { display: block !important; }
+
+  .pvw-qf .qf-foot {
+    color: var(--qf-muted) !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
+    margin: 18px 0 0 !important;
+  }
+  .pvw-qf .qf-foot a {
+    color: var(--qf-text) !important;
+    font-weight: 700 !important;
+    text-decoration: underline !important;
+    text-underline-offset: 3px;
+  }
+
+  .pvw-qf .qf-done { display: none; text-align: center !important; padding: 20px 0 8px !important; }
+  .pvw-qf .qf-card.is-sent .qf-form,
+  .pvw-qf .qf-card.is-sent .qf-head { display: none !important; }
+  .pvw-qf .qf-card.is-sent .qf-done { display: block !important; }
+  .pvw-qf .qf-tick {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 18px !important;
+    background: var(--qf-accent) !important;
+    border-radius: 50%;
+    color: #ffffff !important;
+    font-size: 30px !important;
+    line-height: 1 !important;
+  }
+  .pvw-qf .qf-done h3 {
+    color: var(--qf-text) !important;
+    font-family: inherit !important;
+    font-size: 24px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    text-transform: none !important;
+    margin: 0 0 10px !important;
+  }
+  .pvw-qf .qf-done p { color: var(--qf-muted) !important; font-size: 15px !important; line-height: 1.6 !important; margin: 0 !important; }
+
+  /* Honeypot: invisible to people, filled in by bots */
+  .pvw-qf .qf-hp {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+  }
+
+  @media (max-width: 560px) {
+    .pvw-qf .qf-card { padding: 26px 18px 22px !important; border-radius: 14px !important; }
+    .pvw-qf[data-theme="glass"] .qf-card { padding-left: 4px !important; padding-right: 4px !important; }
+    .pvw-qf .qf-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+    .pvw-qf .qf-title { font-size: 23px !important; }
+  }
+</style>
+
+<div class="pvw-qf" data-service="auto" data-theme="dark"></div>
+
+<script>
+(function () {
+  'use strict';
+  if (window.PVWQuoteForm) { window.PVWQuoteForm.init(); return; }
+
+  var GHL_WEBHOOK_URL = 'https://services.leadconnectorhq.com/hooks/hrVgZySsdb9y1vpJfUw7/webhook-trigger/USkvJQNA7osuZzOhja9b';
+  var SOURCE          = 'Precision Vehicle Wraps Web Form';
+  var MIN_SUBMIT_MS   = 1500;
+  var PHONE           = '780-447-1031';
+
+  // The exact service_type values GHL receives. Never rename or remove one
+  // without changing the GHL workflow first. What visitors read can differ:
+  // each choice below is [value, label].
+  var SERVICES = [
+    'Full Vehicle Wrap',
+    'Partial Wrap',
+    'Paint Protection Film (PPF)',
+    'Ceramic Coating',
+    'Windshield Protection',
+    'Fleet Wrap (Multiple Vehicles)',
+    'Decals / Lettering',
+    'Color Change Wrap',
+    'Other / Not Sure Yet'
+  ];
+
+  // Window tinting has no service_type of its own yet, so it is sent as
+  // "Other / Not Sure Yet" and named in the message.
+  var TINT_SERVICE = 'Other / Not Sure Yet';
+
+  var VARIANTS = {
+    general: {
+      eyebrow: 'Free Quote',
+      heading: 'Request Your Free Quote',
+      sub: 'Tell us about your vehicle and what you have in mind. We reply within 1 business day.',
+      choices: SERVICES.map(function (s) { return [s, s]; }),
+      choiceLabel: 'Service Interested In',
+      placeholder: 'Anything the team should know: number of vehicles, design files, budget range, timeline, or questions.',
+      button: 'Request My Free Quote'
+    },
+    ppf: {
+      eyebrow: 'Paint Protection Film',
+      heading: 'Get Your Free PPF Quote',
+      sub: 'Pick a package or tell us what you want covered. We reply within 1 business day.',
+      service: 'Paint Protection Film (PPF)',
+      extras: [{ name: 'package', label: 'Package', note: 'Package', options: [
+        'Basic PPF Package', 'Full Front PPF Package', 'Full Front PPF Plus+', 'Full Body or Custom Coverage', 'Not Sure Yet'
+      ] }],
+      placeholder: 'New or used vehicle, gloss or satin finish, existing chips, timeline, or questions.',
+      button: 'Get My PPF Quote'
+    },
+    ceramic: {
+      eyebrow: 'Ceramic Coating',
+      heading: 'Get Your Ceramic Coating Quote',
+      sub: 'Tell us about your vehicle and the coating you are considering. We reply within 1 business day.',
+      service: 'Ceramic Coating',
+      extras: [{ name: 'coating', label: 'Coating', note: 'Coating', options: [
+        'Fusion Plus Paint & PPF', 'Fusion Plus Premium v2', 'Fusion Plus Satin', 'Not Sure Yet'
+      ] }],
+      placeholder: 'Paint condition, add-ons like wheels and calipers, glass, trim or upholstery, timeline, or questions.',
+      button: 'Get My Ceramic Quote'
+    },
+    windshield: {
+      eyebrow: 'Windshield & Glass Protection',
+      heading: 'Get Your Windshield Protection Quote',
+      sub: 'Tell us about your vehicle and we will put your quote together. We reply within 1 business day.',
+      service: 'Windshield Protection',
+      placeholder: 'Windshield only or other glass too, any existing chips, timeline, or questions.',
+      button: 'Get My Windshield Quote'
+    },
+    fleet: {
+      eyebrow: 'Commercial & Fleet',
+      heading: 'Get a Fleet Wrap Quote',
+      sub: 'One vehicle or a whole fleet. Tell us about the job and we will put a quote together.',
+      choices: [
+        ['Fleet Wrap (Multiple Vehicles)', 'Fleet wrap (multiple vehicles)'],
+        ['Full Vehicle Wrap', 'Full wrap'],
+        ['Partial Wrap', 'Partial wrap'],
+        ['Decals / Lettering', 'Decals / lettering']
+      ],
+      choiceLabel: 'What do you need?',
+      company: true,
+      vehicleCount: true,
+      vehicleOptional: true,
+      placeholder: 'Vehicle types, your logo or design files, deadline, anything else.',
+      button: 'Get My Fleet Quote'
+    },
+    decals: {
+      eyebrow: 'Car Decals & Lettering',
+      heading: 'Get Your Decal Quote',
+      sub: 'Tell us what you have in mind and where it goes. We reply within 1 business day.',
+      service: 'Decals / Lettering',
+      placeholder: 'What the decal says or shows, size, colours, placement, logo or design files.',
+      button: 'Get My Decal Quote'
+    },
+    'graphic-design': {
+      eyebrow: 'Graphic Design',
+      heading: 'Start Your Wrap Design',
+      sub: 'Tell us about the design and the vehicle it goes on. We reply within 1 business day.',
+      choices: [
+        ['Full Vehicle Wrap', 'Full wrap'],
+        ['Partial Wrap', 'Partial wrap'],
+        ['Decals / Lettering', 'Decals / lettering']
+      ],
+      choiceLabel: 'What are we designing?',
+      placeholder: 'Your business, the look you want, logo or brand files, examples you like, deadline.',
+      button: 'Start My Design Quote'
+    },
+    'special-projects': {
+      eyebrow: 'Special Projects',
+      heading: 'Tell Us About Your Project',
+      sub: 'Describe what you are picturing and we will take it from there.',
+      choices: [
+        ['Full Vehicle Wrap', 'Full wrap'],
+        ['Color Change Wrap', 'Color change wrap'],
+        ['Partial Wrap', 'Partial wrap'],
+        ['Other / Not Sure Yet', 'Something else']
+      ],
+      choiceLabel: 'What kind of project?',
+      placeholder: 'What you are picturing, the vehicle or item, timeline, photos or references you can send.',
+      button: 'Send My Project'
+    },
+    'window-tinting': {
+      eyebrow: 'Window Tinting',
+      heading: 'Get a Window Tinting Quote',
+      sub: 'Tell us about your vehicle and the tint you want. We reply within 1 business day.',
+      service: TINT_SERVICE,
+      requested: 'Window Tinting',
+      placeholder: 'Which windows, how dark, any old tint to remove, timeline, or questions.',
+      button: 'Get My Tint Quote'
+    }
+  };
+
+  // Page address to form version, used when data-service is "auto" or empty.
+  var PATHS = [
+    ['/paint-protection-film', 'ppf'],
+    ['/ceramic-coating', 'ceramic'],
+    ['/windshield-glass-protection', 'windshield'],
+    ['/commercial-fleet-wraps', 'fleet'],
+    ['/decals', 'decals'],
+    ['/graphic-design', 'graphic-design'],
+    ['/special-projects', 'special-projects'],
+    ['/window-tinting', 'window-tinting']
+  ];
+  var ALIASES = {
+    'paint-protection-film': 'ppf', 'ceramic-coating': 'ceramic', 'windshield-glass-protection': 'windshield',
+    'commercial-fleet-wraps': 'fleet', 'commercial': 'fleet', 'car-decals': 'decals', 'tint': 'window-tinting',
+    'contact': 'general', 'contact-us': 'general'
+  };
+
+  // Google Ads and GA4 count a quote when one of these pages loads (GTM-5DBNH4JS).
+  var THANK_YOU = {
+    'Paint Protection Film (PPF)': '/thank-you-ppf-quote/',
+    'Ceramic Coating': '/ceramic-thank-you/'
+  };
+  var THANK_YOU_DEFAULT = '/thank-you/';
+
+  var VEHICLE_COUNTS = ['1', '2 to 5', '6 to 10', '11 to 25', '26+'];
+  var counter = 0;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function pickVariant(root) {
+    var v = (root.getAttribute('data-service') || '').trim().toLowerCase();
+    if (ALIASES[v]) v = ALIASES[v];
+    if (v && v !== 'auto' && VARIANTS[v]) return v;
+    var path = (window.location.pathname || '/').toLowerCase();
+    for (var i = 0; i < PATHS.length; i++) {
+      if (path.indexOf(PATHS[i][0]) === 0) return PATHS[i][1];
+    }
+    return 'general';
+  }
+
+  function render(root, key, v, n) {
+    var id = function (f) { return 'pvwqf' + n + '-' + f; };
+    var heading = root.getAttribute('data-heading');
+    var sub = root.getAttribute('data-sub');
+    var hideHead = heading === 'off';
+    if (!heading || hideHead) heading = v.heading;
+    if (sub == null) sub = v.sub;
+
+    function err(f, text) {
+      return '<p class="qf-err" id="' + id(f) + '-err">' + esc(text) + '</p>';
+    }
+    function text(f, label, type, auto, ph, required, full, extra, errText) {
+      return '<div class="' + (full ? 'qf-full' : '') + '">' +
+        '<label class="qf-label" for="' + id(f) + '">' + esc(label) +
+        (required ? '<span class="qf-req">*</span>' : '<span class="qf-opt">(optional)</span>') + '</label>' +
+        '<input type="' + type + '" id="' + id(f) + '" name="' + f + '" placeholder="' + esc(ph) + '"' +
+        (auto ? ' autocomplete="' + auto + '"' : '') + (extra || '') + '>' +
+        (required ? err(f, errText || 'Please enter your ' + label.toLowerCase() + '.') : '') +
+        '</div>';
+    }
+    function select(f, label, placeholder, options, required, full) {
+      var h = '<div class="' + (full ? 'qf-full' : '') + '">' +
+        '<label class="qf-label" for="' + id(f) + '">' + esc(label) +
+        (required ? '<span class="qf-req">*</span>' : '<span class="qf-opt">(optional)</span>') + '</label>' +
+        '<div class="qf-select"><select id="' + id(f) + '" name="' + f + '">' +
+        '<option value="">' + esc(placeholder) + '</option>';
+      for (var i = 0; i < options.length; i++) {
+        var o = options[i];
+        var value = typeof o === 'string' ? o : o[0];
+        var shown = typeof o === 'string' ? o : o[1];
+        h += '<option value="' + esc(value) + '">' + esc(shown) + '</option>';
+      }
+      return h + '</select></div>' + (required ? err(f, 'Please choose one.') : '') + '</div>';
+    }
+
+    var h = [];
+    h.push('<div class="qf-card">');
+    if (!hideHead) {
+      h.push('<div class="qf-head">');
+      if (v.eyebrow) h.push('<p class="qf-eyebrow">' + esc(v.eyebrow) + '</p>');
+      h.push('<h3 class="qf-title">' + esc(heading) + '</h3>');
+      if (sub) h.push('<p class="qf-sub">' + esc(sub) + '</p>');
+      h.push('</div>');
+    }
+    h.push('<form class="qf-form" novalidate><div class="qf-grid">');
+
+    h.push('<p class="qf-section">Your Contact Info</p>');
+    h.push(text('firstName', 'First Name', 'text', 'given-name', 'Alex', true));
+    h.push(text('lastName', 'Last Name', 'text', 'family-name', 'Smith', true));
+    h.push(text('email', 'Email Address', 'email', 'email', 'you@email.com', true, false, '', 'Please enter a valid email address.'));
+    h.push(text('phone', 'Phone Number', 'tel', 'tel', '(780) 555-0100', true, false, ' inputmode="tel"', 'Please enter a valid phone number.'));
+    if (v.company) h.push(text('company', 'Company', 'text', 'organization', 'Your business name', false, true));
+
+    h.push('<p class="qf-section">Vehicle Details</p>');
+    if (v.vehicleCount) h.push(select('vehicleCount', 'Number of Vehicles', 'How many vehicles?', VEHICLE_COUNTS, false, true));
+    var req = !v.vehicleOptional;
+    h.push(text('vehicleYear', 'Vehicle Year', 'text', '', 'e.g. 2022', req, false, ' inputmode="numeric" maxlength="4"'));
+    h.push(text('vehicleMake', 'Vehicle Make', 'text', '', 'e.g. Ford, BMW, Ram', req));
+    h.push(text('vehicleModel', 'Vehicle Model', 'text', '', 'e.g. M4, Transit, F-150', req, true));
+
+    if (v.choices && v.choices.length > 5) {
+      h.push(select('serviceType', v.choiceLabel, 'Select a service', v.choices, true, true));
+    } else if (v.choices) {
+      h.push('<fieldset class="qf-full"><legend>' + esc(v.choiceLabel) + '<span class="qf-req">*</span></legend>' +
+        '<div class="qf-chips" id="' + id('serviceType') + '">');
+      for (var i = 0; i < v.choices.length; i++) {
+        h.push('<label class="qf-chip"><input type="radio" name="' + id('service') + '" value="' + esc(v.choices[i][0]) + '">' +
+          '<span>' + esc(v.choices[i][1]) + '</span></label>');
+      }
+      h.push('</div>' + err('serviceType', 'Please choose one.') + '</fieldset>');
+    }
+    var extras = v.extras || [];
+    for (var j = 0; j < extras.length; j++) {
+      h.push(select('x-' + extras[j].name, extras[j].label, 'Choose one', extras[j].options, false, true));
+    }
+
+    h.push('<div class="qf-full"><label class="qf-label" for="' + id('message') + '">Details &amp; Questions' +
+      '<span class="qf-opt">(optional)</span></label>' +
+      '<textarea id="' + id('message') + '" name="message" placeholder="' + esc(v.placeholder) + '"></textarea></div>');
+
+    h.push('<div class="qf-hp" aria-hidden="true"><label for="' + id('website') + '">Website</label>' +
+      '<input type="text" id="' + id('website') + '" name="website" tabindex="-1" autocomplete="off"></div>');
+    h.push('</div>');
+
+    // SMS / email consent (A2P 10DLC + TCPA). Wording matches the live contact form.
+    h.push('<div class="qf-consent">' +
+      '<div class="qf-check" id="' + id('consentRow') + '">' +
+      '<input type="checkbox" id="' + id('consentTxn') + '" name="sms_consent_transactional" value="true">' +
+      '<label for="' + id('consentTxn') + '">By checking this box, I consent to receive non-marketing text messages from <strong>Precision Vehicle Wraps</strong> about quotes, appointment confirmations, project updates, and service reminders. Message frequency varies. Message &amp; data rates may apply. Text HELP for assistance, reply STOP to opt out. <span class="qf-req">*</span></label>' +
+      '</div>' + err('consentTxn', 'Please agree to receive transactional messages so we can confirm your appointment.') +
+      '<div class="qf-check">' +
+      '<input type="checkbox" id="' + id('consentMkt') + '" name="sms_consent_marketing" value="true">' +
+      '<label for="' + id('consentMkt') + '">By checking this box, I consent to receive marketing and promotional messages including special offers, discounts, and new product updates from <strong>Precision Vehicle Wraps</strong> at the phone number provided. Frequency may vary. Message &amp; data rates may apply. Text HELP for assistance, reply STOP to opt out.</label>' +
+      '</div></div>');
+
+    h.push('<button type="submit" class="qf-submit"><span class="qf-spin" aria-hidden="true"></span>' +
+      '<span class="qf-btn-text">' + esc(v.button) + ' &rarr;</span></button>');
+    h.push('<p class="qf-fail" role="alert">Something went wrong sending your request. Please try again, or call us at ' +
+      '<a href="tel:' + PHONE + '">' + PHONE + '</a>.</p>');
+    h.push('<p class="qf-foot">Prefer to talk? Call <a href="tel:' + PHONE + '">' + PHONE + '</a></p>');
+    h.push('</form>');
+
+    h.push('<div class="qf-done" role="status" aria-live="polite"><div class="qf-tick" aria-hidden="true">&#10003;</div>' +
+      '<h3>We\'ve Got Your Request!</h3><p>Alex will be in touch within 1 business day<br>to discuss your project.</p></div>');
+    h.push('</div>');
+    root.innerHTML = h.join('');
+  }
+
+  function readCookie(name) {
+    var parts = document.cookie ? document.cookie.split('; ') : [];
+    for (var i = 0; i < parts.length; i++) {
+      var eq = parts[i].indexOf('=');
+      if (parts[i].slice(0, eq) === name) {
+        try { return decodeURIComponent(parts[i].slice(eq + 1)); } catch (e) { return parts[i].slice(eq + 1); }
+      }
+    }
+    return '';
+  }
+
+  // Where the lead came from. URL parameters first, then the HandL UTM
+  // Grabber cookies the site already sets. GHL ignores keys the workflow
+  // does not map, so these are safe to send before anyone maps them.
+  function attribution() {
+    var q = {};
+    try { new URLSearchParams(window.location.search).forEach(function (val, k) { q[k] = val; }); } catch (e) {}
+    var a = {};
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid'].forEach(function (k) {
+      a[k] = q[k] || readCookie(k) || '';
+    });
+    if (!a.gclid) {
+      var gcl = readCookie('_gcl_aw');
+      if (gcl) a.gclid = gcl.split('.').slice(2).join('.');
+    }
+    a.landing_page = readCookie('handl_landing_page');
+    a.original_referrer = readCookie('handl_original_ref');
+    a.referrer = readCookie('handl_ref') || document.referrer || '';
+    var summary = [];
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(function (k) {
+      if (a[k]) summary.push(k.replace('utm_', '') + '=' + a[k]);
+    });
+    if (a.gclid) summary.push('gclid');
+    if (a.fbclid) summary.push('fbclid');
+    if (a.landing_page) summary.push('landing=' + a.landing_page);
+    if (a.original_referrer) summary.push('ref=' + a.original_referrer);
+    a.utm_summary = summary.join(' | ').slice(0, 500);
+    return a;
+  }
+
+  function bind(root, key, v, n) {
+    var form = root.querySelector('.qf-form');
+    var card = root.querySelector('.qf-card');
+    var btn = root.querySelector('.qf-submit');
+    var fail = root.querySelector('.qf-fail');
+    var loadedAt = Date.now();
+    var sending = false;
+    var el = function (f) { return document.getElementById('pvwqf' + n + '-' + f); };
+    var val = function (f) { var e = el(f); return e ? e.value.trim() : ''; };
+
+    function mark(f, bad, target) {
+      var t = target || el(f);
+      var e = el(f + '-err');
+      if (t) {
+        t.classList[bad ? 'add' : 'remove']('is-invalid');
+        if (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA') {
+          if (bad) { t.setAttribute('aria-invalid', 'true'); if (e) t.setAttribute('aria-describedby', e.id); }
+          else { t.removeAttribute('aria-invalid'); }
+        }
+      }
+      if (e) e.classList[bad ? 'add' : 'remove']('is-shown');
+      return bad;
+    }
+
+    function serviceValue() {
+      if (v.service) return v.service;
+      var sel = el('serviceType');
+      if (sel && sel.tagName === 'SELECT') return sel.value;
+      var picked = root.querySelector('input[name="pvwqf' + n + '-service"]:checked');
+      return picked ? picked.value : '';
+    }
+
+    function phoneOk(p) {
+      var d = (p || '').replace(/\D/g, '');
+      if (d.length === 11 && d.charAt(0) === '1') d = d.slice(1);
+      return d.length >= 10 && d.length <= 15;
+    }
+
+    function validate() {
+      var first = null;
+      var check = function (f, bad, target) {
+        if (mark(f, bad, target) && !first) first = target || el(f);
+      };
+      check('firstName', !val('firstName'));
+      check('lastName', !val('lastName'));
+      check('email', !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val('email')));
+      check('phone', !phoneOk(val('phone')));
+      if (!v.vehicleOptional) {
+        check('vehicleYear', !val('vehicleYear'));
+        check('vehicleMake', !val('vehicleMake'));
+        check('vehicleModel', !val('vehicleModel'));
+      }
+      if (!v.service) {
+        var sel = el('serviceType');
+        var bad = !serviceValue();
+        if (sel && sel.tagName === 'SELECT') check('serviceType', bad);
+        else {
+          check('serviceType', bad, sel);
+          if (bad && first === sel) first = root.querySelector('input[name="pvwqf' + n + '-service"]');
+        }
+      }
+      var txn = el('consentTxn');
+      mark('consentTxn', !txn.checked, el('consentRow'));
+      if (!txn.checked && !first) first = txn;
+      return first;
+    }
+
+    function message() {
+      var lines = [];
+      if (v.requested) lines.push('Requested service: ' + v.requested);
+      (v.extras || []).forEach(function (x) {
+        var picked = val('x-' + x.name);
+        if (picked) lines.push(x.note + ': ' + picked);
+      });
+      if (v.company && val('company')) lines.push('Company: ' + val('company'));
+      if (v.vehicleCount && val('vehicleCount')) lines.push('Number of vehicles: ' + val('vehicleCount'));
+      var typed = val('message');
+      if (!lines.length) return typed;
+      return lines.join('\n') + (typed ? '\n\n' + typed : '');
+    }
+
+    function done() {
+      card.classList.add('is-sent');
+      var r = card.getBoundingClientRect();
+      if (r.top < 0 || r.top > window.innerHeight) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+
+    function goThankYou(serviceType) {
+      var setting = (root.getAttribute('data-thanks') || 'auto').trim();
+      if (setting === 'off') return;
+      var target = setting !== 'auto' ? setting : (THANK_YOU[serviceType] || THANK_YOU_DEFAULT);
+      var nav = window.PVWQF_NAVIGATE || function (url) { window.location.href = url; };
+      var go = function (url) { setTimeout(function () { nav(url); }, 900); };
+      if (target === THANK_YOU_DEFAULT) { go(target); return; }
+      // A missing page redirects to the homepage here, which counts nothing,
+      // so check the page exists first and fall back to /thank-you/.
+      var settled = false;
+      var settle = function (url) { if (!settled) { settled = true; go(url); } };
+      setTimeout(function () { settle(THANK_YOU_DEFAULT); }, 2500);
+      fetch(target, { method: 'HEAD', credentials: 'same-origin', cache: 'no-store' })
+        .then(function (res) { settle(res.ok && !res.redirected ? target : THANK_YOU_DEFAULT); })
+        .catch(function () { settle(THANK_YOU_DEFAULT); });
+    }
+
+    form.addEventListener('input', function (e) {
+      var t = e.target;
+      if (t.classList && t.classList.contains('is-invalid')) mark(t.id.replace('pvwqf' + n + '-', ''), false);
+    });
+    form.addEventListener('change', function (e) {
+      var t = e.target;
+      if (t.type === 'radio') mark('serviceType', false, el('serviceType'));
+      if (t.type === 'checkbox' && t.checked && t.name === 'sms_consent_transactional') mark('consentTxn', false, el('consentRow'));
+      if (t.tagName === 'SELECT' && t.value) mark(t.id.replace('pvwqf' + n + '-', ''), false);
+    });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (sending) return;
+      fail.classList.remove('is-shown');
+
+      // Bots: fake success, send nothing, count nothing.
+      if (val('website') || Date.now() - loadedAt < MIN_SUBMIT_MS) { done(); return; }
+
+      var firstBad = validate();
+      if (firstBad) { try { firstBad.focus({ preventScroll: false }); } catch (x) { firstBad.focus(); } return; }
+
+      sending = true;
+      btn.disabled = true;
+      btn.classList.add('is-loading');
+
+      var serviceType = serviceValue();
+      var a = attribution();
+      var payload = {
+        firstName:                 val('firstName'),
+        lastName:                  val('lastName'),
+        email:                     val('email'),
+        phone:                     val('phone'),
+        vehicle_year:              val('vehicleYear'),
+        vehicle_make:              val('vehicleMake'),
+        vehicle_model:             val('vehicleModel'),
+        service_type:              serviceType,
+        message:                   message(),
+        sms_consent_transactional: el('consentTxn').checked,
+        sms_consent_marketing:     el('consentMkt').checked,
+        consent_timestamp:         new Date().toISOString(),
+        consent_user_agent:        (navigator && navigator.userAgent) ? navigator.userAgent : '',
+        source:                    SOURCE,
+        page_url:                  window.location.href,
+        // New keys. The GHL workflow ignores them until someone maps them.
+        form_variant:              key,
+        company_name:              v.company ? val('company') : '',
+        vehicle_count:             v.vehicleCount ? val('vehicleCount') : '',
+        utm_source:                a.utm_source,
+        utm_medium:                a.utm_medium,
+        utm_campaign:              a.utm_campaign,
+        utm_term:                  a.utm_term,
+        utm_content:               a.utm_content,
+        gclid:                     a.gclid,
+        fbclid:                    a.fbclid,
+        landing_page:              a.landing_page,
+        original_referrer:         a.original_referrer,
+        referrer:                  a.referrer,
+        utm_summary:               a.utm_summary
+      };
+      (v.extras || []).forEach(function (x) { payload[x.name] = val('x-' + x.name); });
+
+      fetch(GHL_WEBHOOK_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+      })
+      .then(function () {
+        // GHL's inbound webhook replies 422 even when it ingests the payload,
+        // so any HTTP response counts as success. Never throw on !res.ok here.
+        // (Fixed in 42e176d, regressed in 70af4b4, re-fixed in 1f0263a.)
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ event: 'generate_lead', form_variant: key, service_type: serviceType });
+        done();
+        goThankYou(serviceType);
+      })
+      .catch(function (err) {
+        if (window.console) console.error('PVW quote form: send failed', err);
+        sending = false;
+        btn.disabled = false;
+        btn.classList.remove('is-loading');
+        fail.classList.add('is-shown');
+      });
+    });
+  }
+
+  function init() {
+    var roots = document.querySelectorAll('.pvw-qf');
+    for (var i = 0; i < roots.length; i++) {
+      var root = roots[i];
+      if (root.getAttribute('data-ready')) continue;
+      root.setAttribute('data-ready', '1');
+      var key = pickVariant(root);
+      var n = ++counter;
+      render(root, key, VARIANTS[key], n);
+      bind(root, key, VARIANTS[key], n);
+      root.setAttribute('data-variant', key);
+      var inPopup = root.closest('[data-elementor-type="popup"], .elementor-popup-modal');
+      if (!root.id && !inPopup && !document.getElementById('quote')) root.id = 'quote';
+    }
+  }
+
+  window.PVWQuoteForm = { init: init, version: '2026-09-25' };
+  init();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  if (window.jQuery) window.jQuery(document).on('elementor/popup/show', init);
+})();
+</script>

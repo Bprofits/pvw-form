@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PVW quote form preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  /* Roughly the live site: Lato, navy text, white sections, Hello Elementor resets. */
+  body { margin: 0; font-family: Lato, sans-serif; color: #011627; background: #fff; }
+  label { display: inline-block; line-height: 1; vertical-align: middle; }
+  button, [type=submit] { border: 1px solid #c36; color: #c36; background: transparent; border-radius: 3px; padding: .5rem 1rem; }
+  button:hover, button:focus { background-color: #c36; color: #fff; }
+  input[type=text], input[type=email], input[type=tel], select, textarea { border: 1px solid #666; border-radius: 3px; padding: .5rem 1rem; width: 100%; }
+  section { padding: 56px 16px; }
+  section h2 { max-width: 680px; margin: 0 auto 18px; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; opacity: .6; }
+  .dark { background: #0b0b0b; color: #fff; }
+  .red { background: rgb(107, 0, 15); }
+  .grey { background: #f1f2f4; }
+  #log { position: fixed; right: 8px; bottom: 8px; max-width: 360px; max-height: 40vh; overflow: auto; background: #111; color: #9f9; font: 11px/1.4 monospace; padding: 8px; border-radius: 6px; white-space: pre-wrap; z-index: 9; }
+</style>
+</head>
+<body>
+<section><h2>ppf (white section, default dark card)</h2><div class="pvw-qf" data-service="ppf"></div></section>
+<section class="grey"><h2>fleet</h2><div class="pvw-qf" data-service="fleet"></div></section>
+<section class="dark"><h2>general, glass (contact page)</h2><div class="pvw-qf" data-service="general" data-theme="glass"></div></section>
+<section><h2>ceramic, light theme</h2><div class="pvw-qf" data-service="ceramic" data-theme="light"></div></section>
+<section class="red"><h2>window-tinting</h2><div class="pvw-qf" data-service="window-tinting"></div></section>
+<section><h2>special-projects</h2><div class="pvw-qf" data-service="special-projects"></div></section>
+<section><h2>graphic-design, custom heading</h2><div class="pvw-qf" data-service="graphic-design" data-heading="Let's Design Your Wrap" data-sub="Custom text set on the div."></div></section>
+<section><h2>decals</h2><div class="pvw-qf" data-service="decals"></div></section>
+<section><h2>windshield</h2><div class="pvw-qf" data-service="windshield"></div></section>
+<section><h2>auto on an unknown path = general</h2><div class="pvw-qf" data-service="auto"></div></section>
+<pre id="log">log</pre>
+<script>
+  // Test doubles: never reach GHL. The webhook answers 422 like the real one does.
+  window.__sent = [];
+  window.__nav = [];
+  window.PVWQF_NAVIGATE = function (url) { window.__nav.push(url); log('NAVIGATE ' + url); };
+  var realFetch = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    if (String(url).indexOf('leadconnectorhq.com') !== -1) {
+      window.__sent.push(JSON.parse(opts.body));
+      log('POST webhook ' + JSON.parse(opts.body).service_type);
+      if (window.__failNext) { window.__failNext = false; return Promise.reject(new TypeError('Failed to fetch')); }
+      return new Promise(function (r) { setTimeout(function () { r(new Response('{"status":"Unprocessable"}', { status: 422 })); }, 300); });
+    }
+    return realFetch(url, opts);
+  };
+  function log(s) { var el = document.getElementById('log'); el.textContent = s + '\n' + el.textContent; }
+
+  // Load the real snippet, add its <style> and run its <script>. Its own
+  // placeholder div is left out; the divs above stand in for page widgets.
+  realFetch('../service-form.html', { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (html) {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var style = doc.querySelector('style');
+    document.head.appendChild(style);
+    var s = document.createElement('script');
+    s.textContent = doc.querySelector('script').textContent;
+    document.body.appendChild(s);
+    log('snippet loaded, forms: ' + document.querySelectorAll('.pvw-qf[data-ready]').length);
+  });
+</script>
+</body>
+</html>
