@@ -27,9 +27,11 @@
     #quote scrolls to it.
 
   DO NOT CHANGE
-    - The values in SERVICES. GHL gets the exact text (opportunity name,
-      "Service Interested" field, the lead note). Labels visitors see
-      can differ; values cannot, unless the GHL workflow changes first.
+    - 'Fleet Wrap (Multiple Vehicles)'. The GHL workflow tests that exact
+      text to send fleet leads the commercial email and rep. Every other
+      service value is free text in GHL (opportunity name, "Service
+      Interested" field, the lead note), so a new one needs no GHL change.
+      Labels visitors see can differ from the values.
     - source: 'Precision Vehicle Wraps Web Form' (the opportunity source).
     - "Any HTTP reply is success" on the webhook call (GHL answers 422
       even when it saved the lead).
@@ -426,9 +428,12 @@
   var MIN_SUBMIT_MS   = 1500;
   var PHONE           = '780-447-1031';
 
-  // The exact service_type values GHL receives. Never rename or remove one
-  // without changing the GHL workflow first. What visitors read can differ:
-  // each choice below is [value, label].
+  // The service_type values GHL receives. The workflow "General Form
+  // (coded+hosted)" copies them as free text into the opp name, the contact's
+  // Service Interested field and the note. Only 'Fleet Wrap (Multiple
+  // Vehicles)' is tested by value (three If/Else checks route it to the
+  // commercial email and rep), so never rename that one without changing those
+  // checks first. What visitors read can differ: each choice below is [value, label].
   var SERVICES = [
     'Full Vehicle Wrap',
     'Partial Wrap',
@@ -440,10 +445,6 @@
     'Color Change Wrap',
     'Other / Not Sure Yet'
   ];
-
-  // Window tinting has no service_type of its own yet, so it is sent as
-  // "Other / Not Sure Yet" and named in the message.
-  var TINT_SERVICE = 'Other / Not Sure Yet';
 
   var VARIANTS = {
     general: {
@@ -541,8 +542,7 @@
       eyebrow: 'Window Tinting',
       heading: 'Get a Window Tinting Quote',
       sub: 'Tell us about your vehicle and the tint you want. We reply within 1 business day.',
-      service: TINT_SERVICE,
-      requested: 'Window Tinting',
+      service: 'Window Tinting',
       placeholder: 'Which windows, how dark, any old tint to remove, timeline, or questions.',
       button: 'Get My Tint Quote'
     }
@@ -809,7 +809,6 @@
 
     function message() {
       var lines = [];
-      if (v.requested) lines.push('Requested service: ' + v.requested);
       (v.extras || []).forEach(function (x) {
         var picked = val('x-' + x.name);
         if (picked) lines.push(x.note + ': ' + picked);
