@@ -18,19 +18,22 @@
   .red { background: rgb(107, 0, 15); }
   .grey { background: #f1f2f4; }
   #log { position: fixed; right: 8px; bottom: 8px; max-width: 360px; max-height: 40vh; overflow: auto; background: #111; color: #9f9; font: 11px/1.4 monospace; padding: 8px; border-radius: 6px; white-space: pre-wrap; z-index: 9; }
+  #smoke { position: fixed; left: 8px; bottom: 8px; z-index: 9; background: #111; color: #fff; border-color: #fff; font: 12px monospace; }
 </style>
 </head>
 <body>
 <section><h2>ppf (white section, default dark card)</h2><div class="pvw-qf" data-service="ppf"></div></section>
-<section class="grey"><h2>fleet</h2><div class="pvw-qf" data-service="fleet"></div></section>
-<section class="dark"><h2>general, glass (contact page)</h2><div class="pvw-qf" data-service="general" data-theme="glass"></div></section>
-<section><h2>ceramic, light theme</h2><div class="pvw-qf" data-service="ceramic" data-theme="light"></div></section>
+<section class="grey"><h2>colour-change</h2><div class="pvw-qf" data-service="colour-change"></div></section>
 <section class="red"><h2>window-tinting</h2><div class="pvw-qf" data-service="window-tinting"></div></section>
-<section><h2>special-projects</h2><div class="pvw-qf" data-service="special-projects"></div></section>
-<section><h2>graphic-design, custom heading</h2><div class="pvw-qf" data-service="graphic-design" data-heading="Let's Design Your Wrap" data-sub="Custom text set on the div."></div></section>
+<section><h2>detailing, light theme (ceramic alias also works)</h2><div class="pvw-qf" data-service="detailing" data-theme="light"></div></section>
+<section class="grey"><h2>fleet</h2><div class="pvw-qf" data-service="fleet"></div></section>
 <section><h2>decals</h2><div class="pvw-qf" data-service="decals"></div></section>
+<section class="dark"><h2>general, glass (contact page)</h2><div class="pvw-qf" data-service="general" data-theme="glass"></div></section>
 <section><h2>windshield</h2><div class="pvw-qf" data-service="windshield"></div></section>
+<section><h2>graphic-design, custom heading</h2><div class="pvw-qf" data-service="graphic-design" data-heading="Let's Design Your Wrap" data-sub="Custom text set on the div."></div></section>
+<section class="grey"><h2>special-projects</h2><div class="pvw-qf" data-service="special-projects"></div></section>
 <section><h2>auto on an unknown path = general</h2><div class="pvw-qf" data-service="auto"></div></section>
+<button id="smoke" type="button" onclick="__smoke()">run smoke test</button>
 <pre id="log">log</pre>
 <script>
   // Test doubles: never reach GHL. The webhook answers 422 like the real one does.
@@ -58,8 +61,179 @@
     var s = document.createElement('script');
     s.textContent = doc.querySelector('script').textContent;
     document.body.appendChild(s);
-    log('snippet loaded, forms: ' + document.querySelectorAll('.pvw-qf[data-ready]').length);
+    window.__loadedAt = Date.now();
+    log('snippet loaded, forms: ' + document.querySelectorAll('.pvw-qf[data-ready]').length + ', version ' + (window.PVWQuoteForm && window.PVWQuoteForm.version));
   });
+
+  // ---------------------------------------------------------------------
+  // Smoke test: fills every form step by step, submits, checks the payload.
+  // Run it from the button or window.__smoke(); results in window.__smokeResults.
+  // ---------------------------------------------------------------------
+  var KNOW = 'Yes, I know exactly what I want';
+  var EXPECT = {
+    'ppf':              { service: 'Paint Protection Film (PPF)', vehicle: true, mind: 'Do you have a PPF package in mind?' },
+    'colour-change':    { service: 'Color Change Wrap', vehicle: true, mind: 'Do you have a colour in mind?' },
+    'window-tinting':   { service: 'Window Tinting', vehicle: true, mind: 'Do you have a tint shade in mind?' },
+    'detailing':        { service: 'Detailing & Ceramic Coating', vehicle: true, mind: 'Do you have a package in mind?' },
+    'fleet':            { service: 'Fleet Wrap (Multiple Vehicles)', vehicle: true, fleet: true },
+    'decals':           { service: 'Decals / Lettering', vehicle: false },
+    'general':          { service: 'Full Vehicle Wrap', vehicle: true },
+    'windshield':       { service: 'Windshield Protection', vehicle: true },
+    'graphic-design':   { service: 'Full Vehicle Wrap', vehicle: true },
+    'special-projects': { service: 'Full Vehicle Wrap', vehicle: true }
+  };
+  var TEXT = { firstName: 'Smoke', vehicleMake: 'Ford', vehicleModel: 'F-150', vehicleTrim: 'Lariat', company: 'Acme Plumbing' };
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function setVal(el, v) {
+    el.value = v;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  function fillStep(step) {
+    var els = step.querySelectorAll('input, select, textarea');
+    var seenRadio = {};
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (el.type === 'radio') {
+        if (seenRadio[el.name]) continue;
+        seenRadio[el.name] = true;
+        el.click();
+      } else if (el.type === 'checkbox') {
+        if (el.name === 'sms_consent_transactional' && !el.checked) el.click();
+      } else if (el.tagName === 'SELECT') {
+        setVal(el, el.options[1].value);
+      } else if (el.tagName === 'TEXTAREA') {
+        setVal(el, el.name === 'vehicleDetails' ? '2022 Ram ProMaster\n2021 Ford Transit' : 'Smoke test details, please ignore.');
+      } else if (el.type === 'email') {
+        setVal(el, 'smoke@example.com');
+      } else if (el.type === 'tel') {
+        setVal(el, '780-555-0100');
+      } else {
+        var key = el.name;
+        setVal(el, TEXT[key] || ('x-' + key));
+      }
+    }
+  }
+  function visibleStep(root) { return root.querySelector('.qf-step.is-active'); }
+  function stepIndex(root) { var s = visibleStep(root); return s ? Number(s.getAttribute('data-step')) : -1; }
+
+  async function smokeOne(root, results) {
+    var key = root.getAttribute('data-variant');
+    var exp = EXPECT[key];
+    var fails = [];
+    var check = function (ok, what) { if (!ok) fails.push(what); };
+    var total = root.querySelectorAll('.qf-step').length;
+    var btn = root.querySelector('.qf-submit');
+    var back = root.querySelector('.qf-back');
+    var label = root.querySelector('.qf-step-count');
+
+    check(total >= 2 && total <= 3, 'steps ' + total);
+    check(stepIndex(root) === 0, 'starts on step 0');
+    check(back.hasAttribute('hidden'), 'Back hidden on step 0');
+    check(/Step 1 of \d/.test(label.textContent), 'label ' + label.textContent);
+
+    // Empty Next must stay on step 0, show an error and move focus to it.
+    btn.click();
+    await sleep(30);
+    check(stepIndex(root) === 0, 'empty Next did not advance');
+    check(root.querySelectorAll('.qf-err.is-shown').length > 0, 'empty Next shows errors');
+    check(document.activeElement && root.contains(document.activeElement), 'empty Next focused a field');
+
+    for (var s = 0; s < total; s++) {
+      var step = visibleStep(root);
+      check(Number(step.getAttribute('data-step')) === s, 'on step ' + s);
+      fillStep(step);
+      if (s === 1) {
+        // Back then Next: filled values survive, step 1 shows again.
+        back.click();
+        await sleep(30);
+        check(stepIndex(root) === 0, 'Back returns to step 0');
+        check(!back.hasAttribute('hidden') === false, 'Back hidden again on step 0');
+        btn.click();
+        await sleep(30);
+        check(stepIndex(root) === 1, 'Next returns to step 1 after Back');
+        check(root.querySelectorAll('.qf-err.is-shown').length === 0, 'no stale errors after Back/Next');
+      }
+      if (s < total - 1) {
+        check(/Next/.test(btn.textContent), 'button says Next on step ' + s);
+      } else {
+        check(!/Next/.test(btn.textContent), 'button says Send on the last step: ' + btn.textContent.trim());
+        check(step.querySelector('input[name="sms_consent_transactional"]'), 'consent lives in the last step');
+      }
+      var before = window.__sent.length;
+      btn.click();
+      if (s < total - 1) {
+        await sleep(30);
+        check(stepIndex(root) === s + 1, 'advanced to step ' + (s + 1));
+        check(label.textContent.indexOf('Step ' + (s + 2) + ' of ' + total) === 0, 'label ' + label.textContent);
+      } else {
+        var waited = 0;
+        while (window.__sent.length === before && waited < 3000) { await sleep(50); waited += 50; }
+        check(window.__sent.length === before + 1, 'webhook POST fired');
+        await sleep(400);
+        check(root.querySelector('.qf-card').classList.contains('is-sent'), 'success card shown');
+      }
+    }
+
+    var p = window.__sent[window.__sent.length - 1] || {};
+    check(p.service_type === exp.service, 'service_type ' + p.service_type);
+    check(p.form_variant === key, 'form_variant ' + p.form_variant);
+    check(p.firstName === 'Smoke', 'firstName ' + p.firstName);
+    check(p.lastName === '', 'lastName empty');
+    check(p.vehicle_year === '', 'vehicle_year empty');
+    check(p.email === 'smoke@example.com', 'email');
+    check(p.phone === '780-555-0100', 'phone');
+    check(p.sms_consent_transactional === true, 'consent true');
+    check(p.source === 'Precision Vehicle Wraps Web Form', 'source');
+    check(typeof p.message === 'string' && p.message.indexOf('Smoke test details') !== -1, 'message carries the typed text');
+    if (exp.vehicle) {
+      check(p.vehicle_make === 'Ford', 'vehicle_make ' + p.vehicle_make);
+      check(p.vehicle_model === 'F-150', 'vehicle_model ' + p.vehicle_model);
+      check(p.vehicle_trim === 'Lariat', 'vehicle_trim ' + p.vehicle_trim);
+      check(p.message.indexOf('Trim: Lariat') !== -1, 'message carries Trim');
+    } else {
+      check(p.vehicle_trim === '', 'no trim on ' + key);
+    }
+    if (exp.mind) {
+      check(p.in_mind === KNOW, 'in_mind ' + p.in_mind);
+      check(p.in_mind_question === exp.mind, 'in_mind_question ' + p.in_mind_question);
+      check(p.message.indexOf(exp.mind + ' ' + KNOW) !== -1, 'message carries the in-mind answer');
+    } else {
+      check(p.in_mind === undefined, 'no in_mind on ' + key);
+    }
+    if (exp.fleet) {
+      check(p.company_name === 'Acme Plumbing', 'company_name ' + p.company_name);
+      check(p.vehicle_count === '1-2', 'vehicle_count ' + p.vehicle_count);
+      check(p.has_artwork === 'Yes', 'has_artwork ' + p.has_artwork);
+      check(p.needs_design === 'Yes', 'needs_design ' + p.needs_design);
+      check(p.vehicle_details === '2022 Ram ProMaster\n2021 Ford Transit', 'vehicle_details');
+      check(p.message.indexOf('Company: Acme Plumbing') !== -1 && p.message.indexOf('Number of vehicles: 1-2') !== -1 &&
+        p.message.indexOf('Has artwork and installation services: Yes') !== -1 && p.message.indexOf('Needs branding and design help: Yes') !== -1 &&
+        p.message.indexOf('Vehicle details: 2022 Ram') !== -1, 'message carries every fleet answer');
+    } else {
+      check(p.company_name === '' && p.vehicle_count === '', 'fleet keys empty on ' + key);
+    }
+    var result = { form: key, pass: fails.length === 0, fails: fails };
+    results.push(result);
+    log((result.pass ? 'PASS ' : 'FAIL ') + key + (fails.length ? ': ' + fails.join(' | ') : ''));
+  }
+
+  window.__smoke = async function () {
+    var wait = 1600 - (Date.now() - (window.__loadedAt || 0));
+    if (wait > 0) { log('waiting ' + wait + ' ms for MIN_SUBMIT_MS'); await sleep(wait); }
+    var roots = document.querySelectorAll('.pvw-qf[data-ready]');
+    var results = [];
+    for (var i = 0; i < roots.length; i++) {
+      try { await smokeOne(roots[i], results); }
+      catch (e) { results.push({ form: roots[i].getAttribute('data-variant'), pass: false, fails: ['threw ' + e] }); log('FAIL ' + roots[i].getAttribute('data-variant') + ': threw ' + e); }
+    }
+    await sleep(1200);
+    var passed = results.filter(function (r) { return r.pass; }).length;
+    log('SMOKE ' + passed + '/' + results.length + ' passed, ' + window.__sent.length + ' sends, ' + window.__nav.length + ' navigations');
+    window.__smokeResults = results;
+    return results;
+  };
 </script>
 </body>
 </html>

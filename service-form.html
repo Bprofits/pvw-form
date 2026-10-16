@@ -8,11 +8,21 @@
 
   WHICH FORM SHOWS
     Set data-service on the <div class="pvw-qf"> below:
-      ppf | ceramic | windshield | fleet | decals | graphic-design |
-      special-projects | window-tinting | general
+      ppf | colour-change | window-tinting | detailing | fleet | decals |
+      windshield | graphic-design | special-projects | general
     Leave it as "auto" and the form reads the page address instead
-    (/paint-protection-film/ = ppf, /ceramic-coating/ = ceramic, ...).
+    (/paint-protection-film/ = ppf, /colour-change/ = colour-change,
+    /window-tinting/ = window-tinting, /ceramic-coating/ or /detailing/ =
+    detailing, /commercial-fleet-wraps/ = fleet, /decals/ = decals, ...).
     Any other page gets the general form with the full service list.
+
+  STEPS (Alex, 2026-10-15)
+    Every form is 2 or 3 short steps with Back / Next: About you (first
+    name, phone, email), Your vehicle (make, model, trim), then the one
+    question the page asks ("Do you have a PPF package in mind?" and so
+    on) plus optional details, consent and Send. Fleet adds company name,
+    number of vehicles, a box for more vehicles, and the artwork and
+    design questions. Decals asks what they need and sends.
 
   OPTIONAL SETTINGS (same <div>)
     data-theme="dark"    solid dark card, for white sections (default)
@@ -39,9 +49,9 @@
   AFTER A SEND
     1. dataLayer event "generate_lead" (service_type, form_variant).
     2. The visitor lands on the thank-you page Google Ads counts:
-         PPF      /thank-you-ppf-quote/  (uses /thank-you/ if missing)
-         Ceramic  /ceramic-thank-you/
-         Others   /thank-you/
+         PPF                  /thank-you-ppf-quote/  (uses /thank-you/ if missing)
+         Detailing & Ceramic  /ceramic-thank-you/
+         Others               /thank-you/
   ============================================================
 -->
 
@@ -408,6 +418,62 @@
     opacity: 0 !important;
   }
 
+  /* Steps (Alex's 2026-10-15 spec: 2 or 3 short steps per form). */
+  .pvw-qf .qf-progress { display: flex !important; gap: 6px !important; margin: 0 0 10px !important; }
+  .pvw-qf .qf-bar {
+    flex: 1 1 0 !important;
+    height: 4px !important;
+    border-radius: 999px !important;
+    background: var(--qf-line) !important;
+    transition: background-color 0.2s ease;
+  }
+  .pvw-qf .qf-bar.is-done { background: var(--qf-accent) !important; }
+  .pvw-qf .qf-step-label {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    margin: 0 0 18px !important;
+    color: var(--qf-muted) !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1.5px !important;
+    line-height: 1.3 !important;
+    text-transform: uppercase !important;
+  }
+  .pvw-qf .qf-step-title { color: var(--qf-text) !important; text-align: right !important; }
+  .pvw-qf .qf-step[hidden] { display: none !important; }
+  .pvw-qf .qf-help {
+    margin: -2px 0 8px !important;
+    color: var(--qf-muted) !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+  .pvw-qf fieldset .qf-help { margin-top: 0 !important; }
+  .pvw-qf .qf-nav { display: flex !important; gap: 12px !important; margin: 24px 0 0 !important; }
+  .pvw-qf .qf-nav .qf-submit { flex: 1 1 auto !important; margin: 0 !important; }
+  .pvw-qf .qf-back {
+    flex: 0 0 auto !important;
+    min-height: 56px !important;
+    margin: 0 !important;
+    padding: 0 20px !important;
+    background: transparent !important;
+    border: 1px solid var(--qf-line) !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+    color: var(--qf-text) !important;
+    font-family: inherit !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1.5px !important;
+    line-height: 1.2 !important;
+    text-transform: uppercase !important;
+    cursor: pointer !important;
+  }
+  .pvw-qf .qf-back:hover,
+  .pvw-qf .qf-back:focus { border-color: var(--qf-accent) !important; color: var(--qf-text) !important; background: transparent !important; }
+  .pvw-qf .qf-back:focus-visible { outline: 2px solid var(--qf-accent) !important; outline-offset: 2px !important; }
+  .pvw-qf .qf-back[hidden] { display: none !important; }
+
   @media (max-width: 560px) {
     .pvw-qf .qf-card { padding: 26px 18px 22px !important; border-radius: 14px !important; }
     .pvw-qf[data-theme="glass"] .qf-card { padding-left: 4px !important; padding-right: 4px !important; }
@@ -446,133 +512,228 @@
     'Other / Not Sure Yet'
   ];
 
+  var KNOW = 'Yes, I know exactly what I want';
+  var YES_NO = ['Yes', 'No'];
+  var VEHICLE_COUNTS = ['1-2', '3-5', '6-50'];
+
+  // Field kinds: text | email | tel | select | chips | textarea.
+  //   required  blocks Next/Send until filled (email and phone are also checked).
+  //   full      spans both grid columns.
+  //   payload   extra key sent to GHL (unmapped keys are ignored there until someone maps them).
+  //   note      line added to `message`, which lands in the GHL lead note, so
+  //             every answer reaches the shop even before a key is mapped.
+  //   question  also sends `<payload>_question` with the label.
+  function contact() {
+    return [
+      { name: 'firstName', label: 'First Name', kind: 'text', auto: 'given-name', ph: 'Alex', required: true },
+      { name: 'phone', label: 'Phone Number', kind: 'tel', auto: 'tel', ph: '(780) 555-0100', required: true, err: 'Please enter a valid phone number.' },
+      { name: 'email', label: 'Email Address', kind: 'email', auto: 'email', ph: 'you@email.com', required: true, full: true, err: 'Please enter a valid email address.' }
+    ];
+  }
+  function vehicle(required) {
+    return [
+      { name: 'vehicleMake', label: 'Vehicle Make', kind: 'text', ph: 'e.g. Ford, BMW, Ram', required: required },
+      { name: 'vehicleModel', label: 'Vehicle Model', kind: 'text', ph: 'e.g. F-150, M4, Transit', required: required },
+      { name: 'vehicleTrim', label: 'Trim', kind: 'text', ph: 'e.g. Lariat, M Sport, Laramie', required: false, full: true, payload: 'vehicle_trim', note: 'Trim' }
+    ];
+  }
+  function mind(question, other) {
+    return { name: 'inMind', label: question, kind: 'chips', options: [KNOW, other], required: true, full: true, payload: 'in_mind', note: question, question: true };
+  }
+  function details(ph, label, help) {
+    return { name: 'message', label: label || 'Details & Questions', kind: 'textarea', ph: ph, required: false, full: true, help: help };
+  }
+  function serviceChoice(label, choices) {
+    return { name: 'serviceType', label: label, kind: choices.length > 5 ? 'select' : 'chips', options: choices, required: true, full: true, service: true };
+  }
+  function step(title, fields) { return { title: title, fields: fields }; }
+
   var VARIANTS = {
-    general: {
-      eyebrow: 'Free Quote',
-      heading: 'Request Your Free Quote',
-      sub: 'Tell us about your vehicle and what you have in mind. We reply within 1 business day.',
-      choices: SERVICES.map(function (s) { return [s, s]; }),
-      choiceLabel: 'Service Interested In',
-      placeholder: 'Anything the team should know: number of vehicles, design files, budget range, timeline, or questions.',
-      button: 'Request My Free Quote'
-    },
     ppf: {
       eyebrow: 'Paint Protection Film',
       heading: 'Get Your Free PPF Quote',
-      sub: 'Pick a package or tell us what you want covered. We reply within 1 business day.',
+      sub: 'Three quick steps. We reply within 1 business day.',
       service: 'Paint Protection Film (PPF)',
-      extras: [{ name: 'package', label: 'Package', note: 'Package', options: [
-        'Basic PPF Package', 'Full Front PPF Package', 'Full Front PPF Plus+', 'Full Body or Custom Coverage', 'Not Sure Yet'
-      ] }],
-      placeholder: 'New or used vehicle, gloss or satin finish, existing chips, timeline, or questions.',
-      button: 'Get My PPF Quote'
+      button: 'Get My PPF Quote',
+      steps: [
+        step('About you', contact()),
+        step('Your vehicle', vehicle(true)),
+        step('What you have in mind', [
+          mind('Do you have a PPF package in mind?', 'I would like to see available options'),
+          details('New or used vehicle, gloss or satin finish, existing chips, timeline, or questions.')
+        ])
+      ]
     },
-    ceramic: {
-      eyebrow: 'Ceramic Coating',
-      heading: 'Get Your Ceramic Coating Quote',
-      sub: 'Tell us about your vehicle and the coating you are considering. We reply within 1 business day.',
-      service: 'Ceramic Coating',
-      extras: [{ name: 'coating', label: 'Coating', note: 'Coating', options: [
-        'Fusion Plus Paint & PPF', 'Fusion Plus Premium v2', 'Fusion Plus Satin', 'Not Sure Yet'
-      ] }],
-      placeholder: 'Paint condition, add-ons like wheels and calipers, glass, trim or upholstery, timeline, or questions.',
-      button: 'Get My Ceramic Quote'
+    'colour-change': {
+      eyebrow: 'Colour Change Wrap',
+      heading: 'Get Your Colour Change Quote',
+      sub: 'Three quick steps. We reply within 1 business day.',
+      service: 'Color Change Wrap',
+      button: 'Get My Wrap Quote',
+      steps: [
+        step('About you', contact()),
+        step('Your vehicle', vehicle(true)),
+        step('What you have in mind', [
+          mind('Do you have a colour in mind?', 'I would like to explore options'),
+          details('Gloss, satin or matte, a colour or finish you like, chrome delete, timeline, or questions.')
+        ])
+      ]
+    },
+    'window-tinting': {
+      eyebrow: 'Window Tinting',
+      heading: 'Get a Window Tinting Quote',
+      sub: 'Three quick steps. We reply within 1 business day.',
+      service: 'Window Tinting',
+      button: 'Get My Tint Quote',
+      steps: [
+        step('About you', contact()),
+        step('Your vehicle', vehicle(false)),
+        step('What you have in mind', [
+          mind('Do you have a tint shade in mind?', 'I need assistance'),
+          details('Which windows, how dark, any old tint to remove, timeline, or questions.')
+        ])
+      ]
+    },
+    detailing: {
+      eyebrow: 'Detailing & Ceramic Coating',
+      heading: 'Get Your Detailing & Ceramic Quote',
+      sub: 'Three quick steps. We reply within 1 business day.',
+      service: 'Detailing & Ceramic Coating',
+      button: 'Get My Quote',
+      steps: [
+        step('About you', contact()),
+        step('Your vehicle', vehicle(false)),
+        step('What you have in mind', [
+          mind('Do you have a package in mind?', 'I would like to know more about all packages'),
+          details('Paint condition, interior or exterior, add-ons like wheels, glass or trim, timeline, or questions.')
+        ])
+      ]
+    },
+    fleet: {
+      eyebrow: 'Commercial & Fleet Wraps',
+      heading: 'Get a Fleet Wrap Quote',
+      sub: 'One vehicle or a whole fleet. Three quick steps and we put a quote together.',
+      service: 'Fleet Wrap (Multiple Vehicles)',
+      button: 'Get My Fleet Quote',
+      steps: [
+        step('About you', contact().concat([
+          { name: 'company', label: 'Company Name', kind: 'text', auto: 'organization', ph: 'Your business name', required: true, full: true, payload: 'company_name', note: 'Company' },
+          { name: 'vehicleCount', label: 'Number of Vehicles', kind: 'chips', options: VEHICLE_COUNTS, required: true, full: true, payload: 'vehicle_count', note: 'Number of vehicles' }
+        ])),
+        step('Your vehicles', vehicle(false).concat([
+          { name: 'vehicleDetails', label: 'More Vehicles', kind: 'textarea', ph: 'List each vehicle: year, make, model and trim, one per line.', required: false, full: true, payload: 'vehicle_details', note: 'Vehicle details' }
+        ])),
+        step('Artwork and design', [
+          { name: 'hasArtwork', label: 'Do you have artwork and installation services?', kind: 'chips', options: YES_NO, required: true, full: true, payload: 'has_artwork', note: 'Has artwork and installation services' },
+          { name: 'needsDesign', label: 'Do you need us to help you with branding and design?', kind: 'chips', options: YES_NO, required: true, full: true, payload: 'needs_design', note: 'Needs branding and design help' },
+          details('Deadline, where the vehicles are, logo or design files you can send, anything else.', 'Additional Information',
+            'Any additional information is appreciated and will be used to get you a quote faster.')
+        ])
+      ]
+    },
+    decals: {
+      eyebrow: 'Decals & Printing',
+      heading: 'Get Your Decal Quote',
+      sub: 'Two quick steps. We reply within 1 business day.',
+      service: 'Decals / Lettering',
+      button: 'Get My Decal Quote',
+      steps: [
+        step('About you', contact()),
+        step('What you need', [
+          { name: 'message', label: 'What do you need?', kind: 'textarea', required: true, full: true, err: 'Please tell us what you need.',
+            ph: 'What the decal or print says or shows, size, colours, quantity, placement, logo or design files.' }
+        ])
+      ]
     },
     windshield: {
       eyebrow: 'Windshield & Glass Protection',
       heading: 'Get Your Windshield Protection Quote',
-      sub: 'Tell us about your vehicle and we will put your quote together. We reply within 1 business day.',
+      sub: 'Three quick steps. We reply within 1 business day.',
       service: 'Windshield Protection',
-      placeholder: 'Windshield only or other glass too, any existing chips, timeline, or questions.',
-      button: 'Get My Windshield Quote'
-    },
-    fleet: {
-      eyebrow: 'Commercial & Fleet',
-      heading: 'Get a Fleet Wrap Quote',
-      sub: 'One vehicle or a whole fleet. Tell us about the job and we will put a quote together.',
-      choices: [
-        ['Fleet Wrap (Multiple Vehicles)', 'Fleet wrap (multiple vehicles)'],
-        ['Full Vehicle Wrap', 'Full wrap'],
-        ['Partial Wrap', 'Partial wrap'],
-        ['Decals / Lettering', 'Decals / lettering']
-      ],
-      choiceLabel: 'What do you need?',
-      company: true,
-      vehicleCount: true,
-      vehicleOptional: true,
-      placeholder: 'Vehicle types, your logo or design files, deadline, anything else.',
-      button: 'Get My Fleet Quote'
-    },
-    decals: {
-      eyebrow: 'Car Decals & Lettering',
-      heading: 'Get Your Decal Quote',
-      sub: 'Tell us what you have in mind and where it goes. We reply within 1 business day.',
-      service: 'Decals / Lettering',
-      placeholder: 'What the decal says or shows, size, colours, placement, logo or design files.',
-      button: 'Get My Decal Quote'
+      button: 'Get My Windshield Quote',
+      steps: [
+        step('About you', contact()),
+        step('Your vehicle', vehicle(true)),
+        step('Details', [details('Windshield only or other glass too, any existing chips, timeline, or questions.')])
+      ]
     },
     'graphic-design': {
       eyebrow: 'Graphic Design',
       heading: 'Start Your Wrap Design',
-      sub: 'Tell us about the design and the vehicle it goes on. We reply within 1 business day.',
-      choices: [
-        ['Full Vehicle Wrap', 'Full wrap'],
-        ['Partial Wrap', 'Partial wrap'],
-        ['Decals / Lettering', 'Decals / lettering']
-      ],
-      choiceLabel: 'What are we designing?',
-      placeholder: 'Your business, the look you want, logo or brand files, examples you like, deadline.',
-      button: 'Start My Design Quote'
+      sub: 'Three quick steps. We reply within 1 business day.',
+      button: 'Start My Design Quote',
+      steps: [
+        step('About you', contact()),
+        step('The job', [serviceChoice('What are we designing?', [
+          ['Full Vehicle Wrap', 'Full wrap'],
+          ['Partial Wrap', 'Partial wrap'],
+          ['Decals / Lettering', 'Decals / lettering']
+        ])].concat(vehicle(false))),
+        step('Details', [details('Your business, the look you want, logo or brand files, examples you like, deadline.')])
+      ]
     },
     'special-projects': {
       eyebrow: 'Special Projects',
       heading: 'Tell Us About Your Project',
       sub: 'Describe what you are picturing and we will take it from there.',
-      choices: [
-        ['Full Vehicle Wrap', 'Full wrap'],
-        ['Color Change Wrap', 'Color change wrap'],
-        ['Partial Wrap', 'Partial wrap'],
-        ['Other / Not Sure Yet', 'Something else']
-      ],
-      choiceLabel: 'What kind of project?',
-      placeholder: 'What you are picturing, the vehicle or item, timeline, photos or references you can send.',
-      button: 'Send My Project'
+      button: 'Send My Project',
+      steps: [
+        step('About you', contact()),
+        step('The project', [serviceChoice('What kind of project?', [
+          ['Full Vehicle Wrap', 'Full wrap'],
+          ['Color Change Wrap', 'Color change wrap'],
+          ['Partial Wrap', 'Partial wrap'],
+          ['Other / Not Sure Yet', 'Something else']
+        ])].concat(vehicle(false))),
+        step('Details', [details('What you are picturing, the vehicle or item, timeline, photos or references you can send.')])
+      ]
     },
-    'window-tinting': {
-      eyebrow: 'Window Tinting',
-      heading: 'Get a Window Tinting Quote',
-      sub: 'Tell us about your vehicle and the tint you want. We reply within 1 business day.',
-      service: 'Window Tinting',
-      placeholder: 'Which windows, how dark, any old tint to remove, timeline, or questions.',
-      button: 'Get My Tint Quote'
+    general: {
+      eyebrow: 'Free Quote',
+      heading: 'Request Your Free Quote',
+      sub: 'Three quick steps. We reply within 1 business day.',
+      button: 'Request My Free Quote',
+      steps: [
+        step('About you', contact()),
+        step('The job', [serviceChoice('Service Interested In', SERVICES.map(function (s) { return [s, s]; }))].concat(vehicle(false))),
+        step('Details', [details('Anything the team should know: number of vehicles, design files, budget range, timeline, or questions.')])
+      ]
     }
   };
 
   // Page address to form version, used when data-service is "auto" or empty.
   var PATHS = [
     ['/paint-protection-film', 'ppf'],
-    ['/ceramic-coating', 'ceramic'],
-    ['/windshield-glass-protection', 'windshield'],
+    ['/colour-change', 'colour-change'],
+    ['/color-change', 'colour-change'],
+    ['/window-tinting', 'window-tinting'],
+    ['/ceramic-coating', 'detailing'],
+    ['/detailing', 'detailing'],
     ['/commercial-fleet-wraps', 'fleet'],
     ['/decals', 'decals'],
+    ['/windshield-glass-protection', 'windshield'],
     ['/graphic-design', 'graphic-design'],
-    ['/special-projects', 'special-projects'],
-    ['/window-tinting', 'window-tinting']
+    ['/special-projects', 'special-projects']
   ];
   var ALIASES = {
-    'paint-protection-film': 'ppf', 'ceramic-coating': 'ceramic', 'windshield-glass-protection': 'windshield',
-    'commercial-fleet-wraps': 'fleet', 'commercial': 'fleet', 'car-decals': 'decals', 'tint': 'window-tinting',
+    'paint-protection-film': 'ppf',
+    'colour': 'colour-change', 'color': 'colour-change', 'color-change': 'colour-change', 'wrap': 'colour-change',
+    'tint': 'window-tinting',
+    'ceramic': 'detailing', 'ceramic-coating': 'detailing', 'detailing-and-ceramic': 'detailing', 'detailing-ceramic': 'detailing',
+    'windshield-glass-protection': 'windshield',
+    'commercial-fleet-wraps': 'fleet', 'commercial': 'fleet',
+    'car-decals': 'decals', 'printing': 'decals',
     'contact': 'general', 'contact-us': 'general'
   };
 
   // Google Ads and GA4 count a quote when one of these pages loads (GTM-5DBNH4JS).
   var THANK_YOU = {
     'Paint Protection Film (PPF)': '/thank-you-ppf-quote/',
-    'Ceramic Coating': '/ceramic-thank-you/'
+    'Ceramic Coating': '/ceramic-thank-you/',
+    'Detailing & Ceramic Coating': '/ceramic-thank-you/'
   };
   var THANK_YOU_DEFAULT = '/thank-you/';
 
-  var VEHICLE_COUNTS = ['1', '2 to 5', '6 to 10', '11 to 25', '26+'];
   var counter = 0;
 
   function esc(s) {
@@ -592,6 +753,13 @@
     return 'general';
   }
 
+  function eachField(v, fn) {
+    for (var s = 0; s < v.steps.length; s++) {
+      var fields = v.steps[s].fields;
+      for (var i = 0; i < fields.length; i++) fn(fields[i], s);
+    }
+  }
+
   function render(root, key, v, n) {
     var id = function (f) { return 'pvwqf' + n + '-' + f; };
     var heading = root.getAttribute('data-heading');
@@ -599,32 +767,58 @@
     var hideHead = heading === 'off';
     if (!heading || hideHead) heading = v.heading;
     if (sub == null) sub = v.sub;
+    var total = v.steps.length;
 
     function err(f, text) {
       return '<p class="qf-err" id="' + id(f) + '-err">' + esc(text) + '</p>';
     }
-    function text(f, label, type, auto, ph, required, full, extra, errText) {
-      return '<div class="' + (full ? 'qf-full' : '') + '">' +
-        '<label class="qf-label" for="' + id(f) + '">' + esc(label) +
-        (required ? '<span class="qf-req">*</span>' : '<span class="qf-opt">(optional)</span>') + '</label>' +
-        '<input type="' + type + '" id="' + id(f) + '" name="' + f + '" placeholder="' + esc(ph) + '"' +
-        (auto ? ' autocomplete="' + auto + '"' : '') + (extra || '') + '>' +
-        (required ? err(f, errText || 'Please enter your ' + label.toLowerCase() + '.') : '') +
-        '</div>';
+    function label(f) {
+      return '<label class="qf-label" for="' + id(f.name) + '">' + esc(f.label) +
+        (f.required ? '<span class="qf-req">*</span>' : '<span class="qf-opt">(optional)</span>') + '</label>' +
+        (f.help ? '<p class="qf-help">' + esc(f.help) + '</p>' : '');
     }
-    function select(f, label, placeholder, options, required, full) {
-      var h = '<div class="' + (full ? 'qf-full' : '') + '">' +
-        '<label class="qf-label" for="' + id(f) + '">' + esc(label) +
-        (required ? '<span class="qf-req">*</span>' : '<span class="qf-opt">(optional)</span>') + '</label>' +
-        '<div class="qf-select"><select id="' + id(f) + '" name="' + f + '">' +
-        '<option value="">' + esc(placeholder) + '</option>';
-      for (var i = 0; i < options.length; i++) {
-        var o = options[i];
+    function options(list) {
+      var h = '';
+      for (var i = 0; i < list.length; i++) {
+        var o = list[i];
         var value = typeof o === 'string' ? o : o[0];
         var shown = typeof o === 'string' ? o : o[1];
         h += '<option value="' + esc(value) + '">' + esc(shown) + '</option>';
       }
-      return h + '</select></div>' + (required ? err(f, 'Please choose one.') : '') + '</div>';
+      return h;
+    }
+    function field(f) {
+      var errText = f.err || (f.kind === 'chips' || f.kind === 'select' ? 'Please choose one.' : 'Please enter your ' + f.label.toLowerCase() + '.');
+      var cls = f.full ? 'qf-full' : '';
+      if (f.kind === 'chips') {
+        var c = '<fieldset class="qf-full"><legend>' + esc(f.label) +
+          (f.required ? '<span class="qf-req">*</span>' : '<span class="qf-opt">(optional)</span>') + '</legend>' +
+          (f.help ? '<p class="qf-help">' + esc(f.help) + '</p>' : '') +
+          '<div class="qf-chips" id="' + id(f.name) + '">';
+        for (var i = 0; i < f.options.length; i++) {
+          var o = f.options[i];
+          var value = typeof o === 'string' ? o : o[0];
+          var shown = typeof o === 'string' ? o : o[1];
+          c += '<label class="qf-chip"><input type="radio" name="' + id(f.name) + '-r" value="' + esc(value) + '">' +
+            '<span>' + esc(shown) + '</span></label>';
+        }
+        return c + '</div>' + (f.required ? err(f.name, errText) : '') + '</fieldset>';
+      }
+      if (f.kind === 'select') {
+        return '<div class="' + cls + '">' + label(f) +
+          '<div class="qf-select"><select id="' + id(f.name) + '" name="' + f.name + '">' +
+          '<option value="">Select one</option>' + options(f.options) + '</select></div>' +
+          (f.required ? err(f.name, errText) : '') + '</div>';
+      }
+      if (f.kind === 'textarea') {
+        return '<div class="' + cls + '">' + label(f) +
+          '<textarea id="' + id(f.name) + '" name="' + f.name + '" placeholder="' + esc(f.ph || '') + '"></textarea>' +
+          (f.required ? err(f.name, errText) : '') + '</div>';
+      }
+      return '<div class="' + cls + '">' + label(f) +
+        '<input type="' + f.kind + '" id="' + id(f.name) + '" name="' + f.name + '" placeholder="' + esc(f.ph || '') + '"' +
+        (f.auto ? ' autocomplete="' + f.auto + '"' : '') + (f.kind === 'tel' ? ' inputmode="tel"' : '') + '>' +
+        (f.required ? err(f.name, errText) : '') + '</div>';
     }
 
     var h = [];
@@ -636,59 +830,43 @@
       if (sub) h.push('<p class="qf-sub">' + esc(sub) + '</p>');
       h.push('</div>');
     }
-    h.push('<form class="qf-form" novalidate><div class="qf-grid">');
+    h.push('<form class="qf-form" novalidate>');
 
-    h.push('<p class="qf-section">Your Contact Info</p>');
-    h.push(text('firstName', 'First Name', 'text', 'given-name', 'Alex', true));
-    h.push(text('lastName', 'Last Name', 'text', 'family-name', 'Smith', true));
-    h.push(text('email', 'Email Address', 'email', 'email', 'you@email.com', true, false, '', 'Please enter a valid email address.'));
-    h.push(text('phone', 'Phone Number', 'tel', 'tel', '(780) 555-0100', true, false, ' inputmode="tel"', 'Please enter a valid phone number.'));
-    if (v.company) h.push(text('company', 'Company', 'text', 'organization', 'Your business name', false, true));
+    h.push('<div class="qf-progress" aria-hidden="true">');
+    for (var s = 0; s < total; s++) h.push('<span class="qf-bar' + (s === 0 ? ' is-done' : '') + '"></span>');
+    h.push('</div>');
+    h.push('<p class="qf-step-label" aria-live="polite"><span class="qf-step-count">Step 1 of ' + total + '</span>' +
+      '<span class="qf-step-title">' + esc(v.steps[0].title) + '</span></p>');
 
-    h.push('<p class="qf-section">Vehicle Details</p>');
-    if (v.vehicleCount) h.push(select('vehicleCount', 'Number of Vehicles', 'How many vehicles?', VEHICLE_COUNTS, false, true));
-    var req = !v.vehicleOptional;
-    h.push(text('vehicleYear', 'Vehicle Year', 'text', '', 'e.g. 2022', req, false, ' inputmode="numeric" maxlength="4"'));
-    h.push(text('vehicleMake', 'Vehicle Make', 'text', '', 'e.g. Ford, BMW, Ram', req));
-    h.push(text('vehicleModel', 'Vehicle Model', 'text', '', 'e.g. M4, Transit, F-150', req, true));
-
-    if (v.choices && v.choices.length > 5) {
-      h.push(select('serviceType', v.choiceLabel, 'Select a service', v.choices, true, true));
-    } else if (v.choices) {
-      h.push('<fieldset class="qf-full"><legend>' + esc(v.choiceLabel) + '<span class="qf-req">*</span></legend>' +
-        '<div class="qf-chips" id="' + id('serviceType') + '">');
-      for (var i = 0; i < v.choices.length; i++) {
-        h.push('<label class="qf-chip"><input type="radio" name="' + id('service') + '" value="' + esc(v.choices[i][0]) + '">' +
-          '<span>' + esc(v.choices[i][1]) + '</span></label>');
+    for (s = 0; s < total; s++) {
+      h.push('<div class="qf-step' + (s === 0 ? ' is-active' : '') + '" data-step="' + s + '"' + (s === 0 ? '' : ' hidden') + '>');
+      h.push('<div class="qf-grid">');
+      var fields = v.steps[s].fields;
+      for (var i = 0; i < fields.length; i++) h.push(field(fields[i]));
+      h.push('</div>');
+      if (s === total - 1) {
+        // SMS / email consent (A2P 10DLC + TCPA). Wording matches the live contact form.
+        h.push('<div class="qf-consent">' +
+          '<div class="qf-check" id="' + id('consentRow') + '">' +
+          '<input type="checkbox" id="' + id('consentTxn') + '" name="sms_consent_transactional" value="true">' +
+          '<label for="' + id('consentTxn') + '">By checking this box, I consent to receive non-marketing text messages from <strong>Precision Vehicle Wraps</strong> about quotes, appointment confirmations, project updates, and service reminders. Message frequency varies. Message &amp; data rates may apply. Text HELP for assistance, reply STOP to opt out. <span class="qf-req">*</span></label>' +
+          '</div>' + err('consentTxn', 'Please agree to receive transactional messages so we can confirm your appointment.') +
+          '<div class="qf-check">' +
+          '<input type="checkbox" id="' + id('consentMkt') + '" name="sms_consent_marketing" value="true">' +
+          '<label for="' + id('consentMkt') + '">By checking this box, I consent to receive marketing and promotional messages including special offers, discounts, and new product updates from <strong>Precision Vehicle Wraps</strong> at the phone number provided. Frequency may vary. Message &amp; data rates may apply. Text HELP for assistance, reply STOP to opt out.</label>' +
+          '</div></div>');
       }
-      h.push('</div>' + err('serviceType', 'Please choose one.') + '</fieldset>');
+      h.push('</div>');
     }
-    var extras = v.extras || [];
-    for (var j = 0; j < extras.length; j++) {
-      h.push(select('x-' + extras[j].name, extras[j].label, 'Choose one', extras[j].options, false, true));
-    }
-
-    h.push('<div class="qf-full"><label class="qf-label" for="' + id('message') + '">Details &amp; Questions' +
-      '<span class="qf-opt">(optional)</span></label>' +
-      '<textarea id="' + id('message') + '" name="message" placeholder="' + esc(v.placeholder) + '"></textarea></div>');
 
     h.push('<div class="qf-hp" aria-hidden="true"><label for="' + id('website') + '">Website</label>' +
       '<input type="text" id="' + id('website') + '" name="website" tabindex="-1" autocomplete="off"></div>');
-    h.push('</div>');
 
-    // SMS / email consent (A2P 10DLC + TCPA). Wording matches the live contact form.
-    h.push('<div class="qf-consent">' +
-      '<div class="qf-check" id="' + id('consentRow') + '">' +
-      '<input type="checkbox" id="' + id('consentTxn') + '" name="sms_consent_transactional" value="true">' +
-      '<label for="' + id('consentTxn') + '">By checking this box, I consent to receive non-marketing text messages from <strong>Precision Vehicle Wraps</strong> about quotes, appointment confirmations, project updates, and service reminders. Message frequency varies. Message &amp; data rates may apply. Text HELP for assistance, reply STOP to opt out. <span class="qf-req">*</span></label>' +
-      '</div>' + err('consentTxn', 'Please agree to receive transactional messages so we can confirm your appointment.') +
-      '<div class="qf-check">' +
-      '<input type="checkbox" id="' + id('consentMkt') + '" name="sms_consent_marketing" value="true">' +
-      '<label for="' + id('consentMkt') + '">By checking this box, I consent to receive marketing and promotional messages including special offers, discounts, and new product updates from <strong>Precision Vehicle Wraps</strong> at the phone number provided. Frequency may vary. Message &amp; data rates may apply. Text HELP for assistance, reply STOP to opt out.</label>' +
-      '</div></div>');
-
-    h.push('<button type="submit" class="qf-submit"><span class="qf-spin" aria-hidden="true"></span>' +
-      '<span class="qf-btn-text">' + esc(v.button) + ' &rarr;</span></button>');
+    h.push('<div class="qf-nav">' +
+      '<button type="button" class="qf-back" hidden>&larr; Back</button>' +
+      '<button type="submit" class="qf-submit"><span class="qf-spin" aria-hidden="true"></span>' +
+      '<span class="qf-btn-text">' + (total > 1 ? 'Next &rarr;' : esc(v.button) + ' &rarr;') + '</span></button>' +
+      '</div>');
     h.push('<p class="qf-fail" role="alert">Something went wrong sending your request. Please try again, or call us at ' +
       '<a href="tel:' + PHONE + '">' + PHONE + '</a>.</p>');
     h.push('<p class="qf-foot">Prefer to talk? Call <a href="tel:' + PHONE + '">' + PHONE + '</a></p>');
@@ -744,11 +922,28 @@
     var form = root.querySelector('.qf-form');
     var card = root.querySelector('.qf-card');
     var btn = root.querySelector('.qf-submit');
+    var btnText = root.querySelector('.qf-btn-text');
+    var back = root.querySelector('.qf-back');
     var fail = root.querySelector('.qf-fail');
+    var steps = root.querySelectorAll('.qf-step');
+    var bars = root.querySelectorAll('.qf-bar');
+    var count = root.querySelector('.qf-step-count');
+    var title = root.querySelector('.qf-step-title');
+    var total = v.steps.length;
+    var current = 0;
     var loadedAt = Date.now();
     var sending = false;
-    var el = function (f) { return document.getElementById('pvwqf' + n + '-' + f); };
+    var prefix = 'pvwqf' + n + '-';
+    var el = function (f) { return document.getElementById(prefix + f); };
     var val = function (f) { var e = el(f); return e ? e.value.trim() : ''; };
+    var picked = function (f) {
+      var r = root.querySelector('input[name="' + prefix + f + '-r"]:checked');
+      return r ? r.value : '';
+    };
+    var value = function (f) { return f.kind === 'chips' ? picked(f.name) : val(f.name); };
+    var focusable = function (f) {
+      return f.kind === 'chips' ? root.querySelector('input[name="' + prefix + f.name + '-r"]') : el(f.name);
+    };
 
     function mark(f, bad, target) {
       var t = target || el(f);
@@ -766,10 +961,9 @@
 
     function serviceValue() {
       if (v.service) return v.service;
-      var sel = el('serviceType');
-      if (sel && sel.tagName === 'SELECT') return sel.value;
-      var picked = root.querySelector('input[name="pvwqf' + n + '-service"]:checked');
-      return picked ? picked.value : '';
+      var found = '';
+      eachField(v, function (f) { if (f.service) found = value(f); });
+      return found;
     }
 
     function phoneOk(p) {
@@ -778,43 +972,60 @@
       return d.length >= 10 && d.length <= 15;
     }
 
-    function validate() {
+    function fieldBad(f) {
+      var x = value(f);
+      if (!x) return !!f.required;
+      if (f.kind === 'email') return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
+      if (f.kind === 'tel') return !phoneOk(x);
+      return false;
+    }
+
+    // Marks every problem on step s; returns the element to focus, or null.
+    function validateStep(s) {
       var first = null;
-      var check = function (f, bad, target) {
-        if (mark(f, bad, target) && !first) first = target || el(f);
-      };
-      check('firstName', !val('firstName'));
-      check('lastName', !val('lastName'));
-      check('email', !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val('email')));
-      check('phone', !phoneOk(val('phone')));
-      if (!v.vehicleOptional) {
-        check('vehicleYear', !val('vehicleYear'));
-        check('vehicleMake', !val('vehicleMake'));
-        check('vehicleModel', !val('vehicleModel'));
+      var fields = v.steps[s].fields;
+      for (var i = 0; i < fields.length; i++) {
+        var f = fields[i];
+        if (mark(f.name, fieldBad(f), el(f.name)) && !first) first = focusable(f);
       }
-      if (!v.service) {
-        var sel = el('serviceType');
-        var bad = !serviceValue();
-        if (sel && sel.tagName === 'SELECT') check('serviceType', bad);
-        else {
-          check('serviceType', bad, sel);
-          if (bad && first === sel) first = root.querySelector('input[name="pvwqf' + n + '-service"]');
-        }
+      if (s === total - 1) {
+        var txn = el('consentTxn');
+        mark('consentTxn', !txn.checked, el('consentRow'));
+        if (!txn.checked && !first) first = txn;
       }
-      var txn = el('consentTxn');
-      mark('consentTxn', !txn.checked, el('consentRow'));
-      if (!txn.checked && !first) first = txn;
       return first;
+    }
+
+    function focusOn(t) {
+      if (!t) return;
+      try { t.focus({ preventScroll: false }); } catch (x) { t.focus(); }
+    }
+
+    function show(s) {
+      current = s;
+      for (var i = 0; i < steps.length; i++) {
+        var on = i === s;
+        steps[i].classList[on ? 'add' : 'remove']('is-active');
+        if (on) steps[i].removeAttribute('hidden'); else steps[i].setAttribute('hidden', '');
+        bars[i].classList[i <= s ? 'add' : 'remove']('is-done');
+      }
+      count.textContent = 'Step ' + (s + 1) + ' of ' + total;
+      title.textContent = v.steps[s].title;
+      if (s === 0) back.setAttribute('hidden', ''); else back.removeAttribute('hidden');
+      btnText.innerHTML = s === total - 1 ? esc(v.button) + ' &rarr;' : 'Next &rarr;';
+      var r = card.getBoundingClientRect();
+      if (r.top < 0) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
 
     function message() {
       var lines = [];
-      (v.extras || []).forEach(function (x) {
-        var picked = val('x-' + x.name);
-        if (picked) lines.push(x.note + ': ' + picked);
+      eachField(v, function (f) {
+        if (!f.note) return;
+        var x = value(f);
+        // "Do you have a colour in mind? Yes, I know..." reads as a sentence;
+        // other notes read "Trim: Lariat".
+        if (x) lines.push(f.note + (/\?$/.test(f.note) ? ' ' : ': ') + x);
       });
-      if (v.company && val('company')) lines.push('Company: ' + val('company'));
-      if (v.vehicleCount && val('vehicleCount')) lines.push('Number of vehicles: ' + val('vehicleCount'));
       var typed = val('message');
       if (!lines.length) return typed;
       return lines.join('\n') + (typed ? '\n\n' + typed : '');
@@ -843,15 +1054,20 @@
         .catch(function () { settle(THANK_YOU_DEFAULT); });
     }
 
+    back.addEventListener('click', function () { if (current > 0 && !sending) show(current - 1); });
+
     form.addEventListener('input', function (e) {
       var t = e.target;
-      if (t.classList && t.classList.contains('is-invalid')) mark(t.id.replace('pvwqf' + n + '-', ''), false);
+      if (t.classList && t.classList.contains('is-invalid')) mark(t.id.replace(prefix, ''), false);
     });
     form.addEventListener('change', function (e) {
       var t = e.target;
-      if (t.type === 'radio') mark('serviceType', false, el('serviceType'));
+      if (t.type === 'radio') {
+        var f = t.name.replace(prefix, '').replace(/-r$/, '');
+        mark(f, false, el(f));
+      }
       if (t.type === 'checkbox' && t.checked && t.name === 'sms_consent_transactional') mark('consentTxn', false, el('consentRow'));
-      if (t.tagName === 'SELECT' && t.value) mark(t.id.replace('pvwqf' + n + '-', ''), false);
+      if (t.tagName === 'SELECT' && t.value) mark(t.id.replace(prefix, ''), false);
     });
 
     form.addEventListener('submit', function (e) {
@@ -859,26 +1075,39 @@
       if (sending) return;
       fail.classList.remove('is-shown');
 
+      // Enter or Next on an earlier step: check that step, then move on.
+      if (current < total - 1) {
+        var bad = validateStep(current);
+        if (bad) { focusOn(bad); return; }
+        show(current + 1);
+        return;
+      }
+
       // Bots: fake success, send nothing, count nothing.
       if (val('website') || Date.now() - loadedAt < MIN_SUBMIT_MS) { done(); return; }
 
-      var firstBad = validate();
-      if (firstBad) { try { firstBad.focus({ preventScroll: false }); } catch (x) { firstBad.focus(); } return; }
+      // Every step is checked again; the first problem wins and its step shows.
+      for (var s = 0; s < total; s++) {
+        var firstBad = validateStep(s);
+        if (firstBad) { if (s !== current) show(s); focusOn(firstBad); return; }
+      }
 
       sending = true;
       btn.disabled = true;
+      back.disabled = true;
       btn.classList.add('is-loading');
 
       var serviceType = serviceValue();
       var a = attribution();
       var payload = {
         firstName:                 val('firstName'),
-        lastName:                  val('lastName'),
+        lastName:                  '',
         email:                     val('email'),
         phone:                     val('phone'),
-        vehicle_year:              val('vehicleYear'),
+        vehicle_year:              '',
         vehicle_make:              val('vehicleMake'),
         vehicle_model:             val('vehicleModel'),
+        vehicle_trim:              val('vehicleTrim'),
         service_type:              serviceType,
         message:                   message(),
         sms_consent_transactional: el('consentTxn').checked,
@@ -887,10 +1116,11 @@
         consent_user_agent:        (navigator && navigator.userAgent) ? navigator.userAgent : '',
         source:                    SOURCE,
         page_url:                  window.location.href,
-        // New keys. The GHL workflow ignores them until someone maps them.
+        // Keys the GHL workflow ignores until someone maps them. Every answer
+        // is also in `message`, which lands in the lead note.
         form_variant:              key,
-        company_name:              v.company ? val('company') : '',
-        vehicle_count:             v.vehicleCount ? val('vehicleCount') : '',
+        company_name:              '',
+        vehicle_count:             '',
         utm_source:                a.utm_source,
         utm_medium:                a.utm_medium,
         utm_campaign:              a.utm_campaign,
@@ -903,7 +1133,11 @@
         referrer:                  a.referrer,
         utm_summary:               a.utm_summary
       };
-      (v.extras || []).forEach(function (x) { payload[x.name] = val('x-' + x.name); });
+      eachField(v, function (f) {
+        if (!f.payload) return;
+        payload[f.payload] = value(f);
+        if (f.question) payload[f.payload + '_question'] = f.label;
+      });
 
       fetch(GHL_WEBHOOK_URL, {
         method:  'POST',
@@ -923,6 +1157,7 @@
         if (window.console) console.error('PVW quote form: send failed', err);
         sending = false;
         btn.disabled = false;
+        back.disabled = false;
         btn.classList.remove('is-loading');
         fail.classList.add('is-shown');
       });
@@ -945,7 +1180,7 @@
     }
   }
 
-  window.PVWQuoteForm = { init: init, version: '2026-09-25' };
+  window.PVWQuoteForm = { init: init, version: '2026-10-16', variants: Object.keys(VARIANTS) };
   init();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   if (window.jQuery) window.jQuery(document).on('elementor/popup/show', init);
