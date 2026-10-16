@@ -334,6 +334,8 @@
     line-height: 1.2 !important;
     text-transform: uppercase !important;
     text-decoration: none !important;
+    white-space: normal !important;   /* the site's button rule says nowrap: the label wraps instead of leaving the card */
+    min-width: 0 !important;
     cursor: pointer !important;
     transition: background-color 0.15s ease, transform 0.1s ease;
   }
@@ -450,7 +452,7 @@
   }
   .pvw-qf fieldset .qf-help { margin-top: 0 !important; }
   .pvw-qf .qf-nav { display: flex !important; gap: 12px !important; margin: 24px 0 0 !important; }
-  .pvw-qf .qf-nav .qf-submit { flex: 1 1 auto !important; margin: 0 !important; }
+  .pvw-qf .qf-nav .qf-submit { flex: 1 1 0% !important; margin: 0 !important; }
   .pvw-qf .qf-back {
     flex: 0 0 auto !important;
     min-height: 56px !important;
@@ -479,6 +481,8 @@
     .pvw-qf[data-theme="glass"] .qf-card { padding-left: 4px !important; padding-right: 4px !important; }
     .pvw-qf .qf-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
     .pvw-qf .qf-title { font-size: 23px !important; }
+    .pvw-qf .qf-submit { font-size: 14px !important; letter-spacing: 1.5px !important; padding: 14px 14px !important; }
+    .pvw-qf .qf-back { padding: 0 14px !important; }
   }
 </style>
 
@@ -865,7 +869,7 @@
     h.push('<div class="qf-nav">' +
       '<button type="button" class="qf-back" hidden>&larr; Back</button>' +
       '<button type="submit" class="qf-submit"><span class="qf-spin" aria-hidden="true"></span>' +
-      '<span class="qf-btn-text">' + (total > 1 ? 'Next &rarr;' : esc(v.button) + ' &rarr;') + '</span></button>' +
+      '<span class="qf-btn-text">' + (total > 1 ? 'Next&nbsp;&rarr;' : esc(v.button) + '&nbsp;&rarr;') + '</span></button>' +
       '</div>');
     h.push('<p class="qf-fail" role="alert">Something went wrong sending your request. Please try again, or call us at ' +
       '<a href="tel:' + PHONE + '">' + PHONE + '</a>.</p>');
@@ -1012,7 +1016,7 @@
       count.textContent = 'Step ' + (s + 1) + ' of ' + total;
       title.textContent = v.steps[s].title;
       if (s === 0) back.setAttribute('hidden', ''); else back.removeAttribute('hidden');
-      btnText.innerHTML = s === total - 1 ? esc(v.button) + ' &rarr;' : 'Next &rarr;';
+      btnText.innerHTML = s === total - 1 ? esc(v.button) + '&nbsp;&rarr;' : 'Next&nbsp;&rarr;';
       var r = card.getBoundingClientRect();
       if (r.top < 0) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
