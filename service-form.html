@@ -16,13 +16,15 @@
     detailing, /commercial-fleet-wraps/ = fleet, /decals/ = decals, ...).
     Any other page gets the general form with the full service list.
 
-  STEPS (Alex, 2026-10-15)
+  STEPS (Alex, 2026-10-15 and 2026-10-16)
     Every form is 2 or 3 short steps with Back / Next: About you (first
-    name, phone, email), Your vehicle (make, model, trim), then the one
-    question the page asks ("Do you have a PPF package in mind?" and so
-    on) plus optional details, consent and Send. Fleet adds company name,
-    number of vehicles, a box for more vehicles, and the artwork and
-    design questions. Decals asks what they need and sends.
+    name, last name optional, phone, email), Your vehicle (year, make,
+    model, trim), then the one question the page asks ("Do you have a PPF
+    package in mind?" and so on) plus optional details, consent and Send.
+    Detailing & ceramic has no package question until the packages exist
+    (Alex, 2026-10-16). Fleet adds company name, number of vehicles, a box
+    for more vehicles, and the artwork and design questions. Decals asks
+    what they need and sends.
 
   OPTIONAL SETTINGS (same <div>)
     data-theme="dark"    solid dark card, for white sections (default)
@@ -527,18 +529,21 @@
   //   note      line added to `message`, which lands in the GHL lead note, so
   //             every answer reaches the shop even before a key is mapped.
   //   question  also sends `<payload>_question` with the label.
+  //   pattern   regex a filled value must match; err is the message shown.
   function contact() {
     return [
       { name: 'firstName', label: 'First Name', kind: 'text', auto: 'given-name', ph: 'Alex', required: true },
+      { name: 'lastName', label: 'Last Name', kind: 'text', auto: 'family-name', ph: '', required: false },
       { name: 'phone', label: 'Phone Number', kind: 'tel', auto: 'tel', ph: '(780) 555-0100', required: true, err: 'Please enter a valid phone number.' },
-      { name: 'email', label: 'Email Address', kind: 'email', auto: 'email', ph: 'you@email.com', required: true, full: true, err: 'Please enter a valid email address.' }
+      { name: 'email', label: 'Email Address', kind: 'email', auto: 'email', ph: 'you@email.com', required: true, err: 'Please enter a valid email address.' }
     ];
   }
   function vehicle(required) {
     return [
+      { name: 'vehicleYear', label: 'Vehicle Year', kind: 'text', inputmode: 'numeric', maxlength: 4, ph: 'e.g. 2022', required: required, pattern: /^(19|20)\d\d$/, err: 'Please enter a 4-digit year.' },
       { name: 'vehicleMake', label: 'Vehicle Make', kind: 'text', ph: 'e.g. Ford, BMW, Ram', required: required },
       { name: 'vehicleModel', label: 'Vehicle Model', kind: 'text', ph: 'e.g. F-150, M4, Transit', required: required },
-      { name: 'vehicleTrim', label: 'Trim', kind: 'text', ph: 'e.g. Lariat, M Sport, Laramie', required: false, full: true, payload: 'vehicle_trim', note: 'Trim' }
+      { name: 'vehicleTrim', label: 'Trim', kind: 'text', ph: 'e.g. Lariat, M Sport, Laramie', required: false, payload: 'vehicle_trim', note: 'Trim' }
     ];
   }
   function mind(question, other) {
@@ -607,8 +612,10 @@
       steps: [
         step('About you', contact()),
         step('Your vehicle', vehicle(false)),
-        step('What you have in mind', [
-          mind('Do you have a package in mind?', 'I would like to know more about all packages'),
+        // Alex, 2026-10-16: no package question until the detailing packages
+        // exist. Then put mind('Do you have a detailing package in mind?',
+        // 'I would like to know more about all packages') back in front of details().
+        step('Details', [
           details('Paint condition, interior or exterior, add-ons like wheels, glass or trim, timeline, or questions.')
         ])
       ]
@@ -821,8 +828,10 @@
       }
       return '<div class="' + cls + '">' + label(f) +
         '<input type="' + f.kind + '" id="' + id(f.name) + '" name="' + f.name + '" placeholder="' + esc(f.ph || '') + '"' +
-        (f.auto ? ' autocomplete="' + f.auto + '"' : '') + (f.kind === 'tel' ? ' inputmode="tel"' : '') + '>' +
-        (f.required ? err(f.name, errText) : '') + '</div>';
+        (f.auto ? ' autocomplete="' + f.auto + '"' : '') +
+        (f.kind === 'tel' ? ' inputmode="tel"' : f.inputmode ? ' inputmode="' + f.inputmode + '"' : '') +
+        (f.maxlength ? ' maxlength="' + f.maxlength + '"' : '') + '>' +
+        ((f.required || f.pattern) ? err(f.name, errText) : '') + '</div>';
     }
 
     var h = [];
@@ -981,6 +990,7 @@
       if (!x) return !!f.required;
       if (f.kind === 'email') return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
       if (f.kind === 'tel') return !phoneOk(x);
+      if (f.pattern) return !f.pattern.test(x);
       return false;
     }
 
@@ -1105,10 +1115,10 @@
       var a = attribution();
       var payload = {
         firstName:                 val('firstName'),
-        lastName:                  '',
+        lastName:                  val('lastName'),
         email:                     val('email'),
         phone:                     val('phone'),
-        vehicle_year:              '',
+        vehicle_year:              val('vehicleYear'),
         vehicle_make:              val('vehicleMake'),
         vehicle_model:             val('vehicleModel'),
         vehicle_trim:              val('vehicleTrim'),
@@ -1184,7 +1194,7 @@
     }
   }
 
-  window.PVWQuoteForm = { init: init, version: '2026-10-16', variants: Object.keys(VARIANTS) };
+  window.PVWQuoteForm = { init: init, version: '2026-10-16.2', variants: Object.keys(VARIANTS) };
   init();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   if (window.jQuery) window.jQuery(document).on('elementor/popup/show', init);

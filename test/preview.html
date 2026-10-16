@@ -74,7 +74,7 @@
     'ppf':              { service: 'Paint Protection Film (PPF)', vehicle: true, mind: 'Do you have a PPF package in mind?' },
     'colour-change':    { service: 'Color Change Wrap', vehicle: true, mind: 'Do you have a colour in mind?' },
     'window-tinting':   { service: 'Window Tinting', vehicle: true, mind: 'Do you have a tint shade in mind?' },
-    'detailing':        { service: 'Detailing & Ceramic Coating', vehicle: true, mind: 'Do you have a package in mind?' },
+    'detailing':        { service: 'Detailing & Ceramic Coating', vehicle: true },
     'fleet':            { service: 'Fleet Wrap (Multiple Vehicles)', vehicle: true, fleet: true },
     'decals':           { service: 'Decals / Lettering', vehicle: false },
     'general':          { service: 'Full Vehicle Wrap', vehicle: true },
@@ -82,7 +82,7 @@
     'graphic-design':   { service: 'Full Vehicle Wrap', vehicle: true },
     'special-projects': { service: 'Full Vehicle Wrap', vehicle: true }
   };
-  var TEXT = { firstName: 'Smoke', vehicleMake: 'Ford', vehicleModel: 'F-150', vehicleTrim: 'Lariat', company: 'Acme Plumbing' };
+  var TEXT = { firstName: 'Smoke', lastName: 'Tester', vehicleYear: '2022', vehicleMake: 'Ford', vehicleModel: 'F-150', vehicleTrim: 'Lariat', company: 'Acme Plumbing' };
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
   function setVal(el, v) {
@@ -161,6 +161,17 @@
         check(!/Next/.test(btn.textContent), 'button says Send on the last step: ' + btn.textContent.trim());
         check(step.querySelector('input[name="sms_consent_transactional"]'), 'consent lives in the last step');
       }
+      var yearEl = step.querySelector('input[name="vehicleYear"]');
+      if (yearEl) {
+        // A 2-digit year is refused even where the year is optional.
+        setVal(yearEl, '22');
+        btn.click();
+        await sleep(30);
+        check(stepIndex(root) === s, 'bad year did not advance');
+        var yearErr = document.getElementById(yearEl.id + '-err');
+        check(yearErr && yearErr.classList.contains('is-shown'), 'bad year shows its error');
+        setVal(yearEl, '2022');
+      }
       var before = window.__sent.length;
       btn.click();
       if (s < total - 1) {
@@ -180,20 +191,21 @@
     check(p.service_type === exp.service, 'service_type ' + p.service_type);
     check(p.form_variant === key, 'form_variant ' + p.form_variant);
     check(p.firstName === 'Smoke', 'firstName ' + p.firstName);
-    check(p.lastName === '', 'lastName empty');
-    check(p.vehicle_year === '', 'vehicle_year empty');
+    check(p.lastName === 'Tester', 'lastName ' + p.lastName);
     check(p.email === 'smoke@example.com', 'email');
     check(p.phone === '780-555-0100', 'phone');
     check(p.sms_consent_transactional === true, 'consent true');
     check(p.source === 'Precision Vehicle Wraps Web Form', 'source');
     check(typeof p.message === 'string' && p.message.indexOf('Smoke test details') !== -1, 'message carries the typed text');
     if (exp.vehicle) {
+      check(p.vehicle_year === '2022', 'vehicle_year ' + p.vehicle_year);
       check(p.vehicle_make === 'Ford', 'vehicle_make ' + p.vehicle_make);
       check(p.vehicle_model === 'F-150', 'vehicle_model ' + p.vehicle_model);
       check(p.vehicle_trim === 'Lariat', 'vehicle_trim ' + p.vehicle_trim);
       check(p.message.indexOf('Trim: Lariat') !== -1, 'message carries Trim');
     } else {
       check(p.vehicle_trim === '', 'no trim on ' + key);
+      check(p.vehicle_year === '', 'no year on ' + key);
     }
     if (exp.mind) {
       check(p.in_mind === KNOW, 'in_mind ' + p.in_mind);
