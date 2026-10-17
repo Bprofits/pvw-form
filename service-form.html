@@ -81,9 +81,15 @@
     scroll-margin-top: 150px;
   }
   .pvw-qf[data-theme="glass"] {
-    --qf-card: transparent;
-    --qf-card-edge: transparent;
-    --qf-shadow: none;
+    --qf-card: rgba(10, 10, 12, 0.62);
+    --qf-card-edge: rgba(255, 255, 255, 0.14);
+    --qf-field: rgba(255, 255, 255, 0.07);
+    --qf-field-focus: rgba(255, 255, 255, 0.11);
+    --qf-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+  }
+  .pvw-qf[data-theme="glass"] .qf-card {
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+    backdrop-filter: blur(16px) saturate(1.2);
   }
   .pvw-qf[data-theme="light"] {
     --qf-card: #ffffff;
@@ -215,8 +221,13 @@
     background: var(--qf-field-focus) !important;
     box-shadow: 0 0 0 3px rgba(209, 0, 0, 0.18) !important;
   }
-  .pvw-qf .is-invalid,
-  .pvw-qf .is-invalid:focus { border-color: var(--qf-error) !important; }
+  /* Element + class so this outranks the input[type] base rule above (both are !important). */
+  .pvw-qf input.is-invalid,
+  .pvw-qf select.is-invalid,
+  .pvw-qf textarea.is-invalid,
+  .pvw-qf input.is-invalid:focus,
+  .pvw-qf select.is-invalid:focus,
+  .pvw-qf textarea.is-invalid:focus { border-color: var(--qf-error) !important; box-shadow: 0 0 0 3px rgba(255, 92, 92, 0.16) !important; }
   .pvw-qf textarea { min-height: 112px !important; resize: vertical !important; }
 
   .pvw-qf .qf-select { position: relative !important; }
@@ -382,6 +393,7 @@
     font-weight: 700 !important;
     text-decoration: underline !important;
     text-underline-offset: 3px;
+    white-space: nowrap !important;
   }
 
   .pvw-qf .qf-done { display: none; text-align: center !important; padding: 20px 0 8px !important; }
@@ -480,7 +492,6 @@
 
   @media (max-width: 560px) {
     .pvw-qf .qf-card { padding: 26px 18px 22px !important; border-radius: 14px !important; }
-    .pvw-qf[data-theme="glass"] .qf-card { padding-left: 4px !important; padding-right: 4px !important; }
     .pvw-qf .qf-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
     .pvw-qf .qf-title { font-size: 23px !important; }
     .pvw-qf .qf-submit { font-size: 14px !important; letter-spacing: 1.5px !important; padding: 14px 14px !important; }
@@ -1194,7 +1205,7 @@
     }
   }
 
-  window.PVWQuoteForm = { init: init, version: '2026-10-16.2', variants: Object.keys(VARIANTS) };
+  window.PVWQuoteForm = { init: init, version: '2026-10-17', variants: Object.keys(VARIANTS) };
   init();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   if (window.jQuery) window.jQuery(document).on('elementor/popup/show', init);
