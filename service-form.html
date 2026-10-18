@@ -646,7 +646,7 @@
           { name: 'vehicleDetails', label: 'More Vehicles', kind: 'textarea', ph: 'List each vehicle: year, make, model and trim, one per line.', required: false, full: true, payload: 'vehicle_details', note: 'Vehicle details' }
         ])),
         step('Artwork and design', [
-          { name: 'hasArtwork', label: 'Do you have artwork and installation services?', kind: 'chips', options: YES_NO, required: true, full: true, payload: 'has_artwork', note: 'Has artwork and installation services' },
+          { name: 'hasArtwork', label: 'Do you have artwork and need installation services?', kind: 'chips', options: YES_NO, required: true, full: true, payload: 'has_artwork', note: 'Has artwork and needs installation services' },
           { name: 'needsDesign', label: 'Do you need us to help you with branding and design?', kind: 'chips', options: YES_NO, required: true, full: true, payload: 'needs_design', note: 'Needs branding and design help' },
           details('Deadline, where the vehicles are, logo or design files you can send, anything else.', 'Additional Information',
             'Any additional information is appreciated and will be used to get you a quote faster.')
@@ -1205,7 +1205,7 @@
     }
   }
 
-  window.PVWQuoteForm = { init: init, version: '2026-10-17', variants: Object.keys(VARIANTS) };
+  window.PVWQuoteForm = { init: init, version: '2026-10-17.2', variants: Object.keys(VARIANTS) };
   init();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   if (window.jQuery) window.jQuery(document).on('elementor/popup/show', init);
