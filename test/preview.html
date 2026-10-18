@@ -221,7 +221,7 @@
       check(p.needs_design === 'Yes', 'needs_design ' + p.needs_design);
       check(p.vehicle_details === '2022 Ram ProMaster\n2021 Ford Transit', 'vehicle_details');
       check(p.message.indexOf('Company: Acme Plumbing') !== -1 && p.message.indexOf('Number of vehicles: 1-2') !== -1 &&
-        p.message.indexOf('Has artwork and installation services: Yes') !== -1 && p.message.indexOf('Needs branding and design help: Yes') !== -1 &&
+        p.message.indexOf('Has artwork and needs installation services: Yes') !== -1 && p.message.indexOf('Needs branding and design help: Yes') !== -1 &&
         p.message.indexOf('Vehicle details: 2022 Ram') !== -1, 'message carries every fleet answer');
     } else {
       check(p.company_name === '' && p.vehicle_count === '', 'fleet keys empty on ' + key);
